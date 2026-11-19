@@ -15,6 +15,7 @@ CHECKS = [
     ("vorinostat", [("CDKN1A", +1), ("HIST1H2BM", -1), ("CCND1", -1)]),
     ("dexamethasone", [("TSC22D3", +1), ("FKBP5", +1), ("DUSP1", +1)]),
     ("trichostatin-a", [("CDKN1A", +1)]),
+    ("sirolimus", [("DDIT4", -1), ("BNIP3", -1)]),
 ]
 
 
