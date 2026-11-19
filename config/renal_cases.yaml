@@ -1,0 +1,46 @@
+# Seed renal disease signatures used for demo cases (curated marker sets).
+# These are compact literature-marker seeds, not full DEG tables; provenance is
+# recorded so users can replace them with their own cohort signatures.
+cases:
+  DKD:
+    disease_name: Diabetic kidney disease
+    compartment: glomerulus_tubule
+    dataset_accession: demo_seed
+    pmid: "demo"
+    up: [COL1A1, COL3A1, FN1, TGFB1, SERPINE1, CCN2, LCN2, HAVCR1, SPP1, CTGF]
+    down: [NPHS1, NPHS2, PODXL, WT1, PPARA, PPARGC1A, CPT1A]
+  LN:
+    disease_name: Lupus nephritis
+    compartment: glomerulus_immune
+    dataset_accession: demo_seed
+    pmid: "demo"
+    up: [IFI44L, IFI27, MX1, ISG15, STAT1, CCL2, CXCL10, TNF, IL6]
+    down: [NPHS1, NPHS2, PODXL]
+  IgAN:
+    disease_name: IgA nephropathy
+    compartment: glomerulus
+    dataset_accession: demo_seed
+    pmid: "demo"
+    up: [C3, CFB, CCL2, CXCL8, LCN2, HAVCR1, TGFB1]
+    down: [NPHS1, NPHS2]
+  AKI:
+    disease_name: Acute kidney injury
+    compartment: tubule
+    dataset_accession: demo_seed
+    pmid: "demo"
+    up: [HAVCR1, LCN2, SPP1, SOX9, VCAM1, IL18, CASP1, NLRP3]
+    down: [PPARA, PPARGC1A, CPT1A, ACADM, SLC22A8]
+  CKD_fibrosis:
+    disease_name: CKD interstitial fibrosis
+    compartment: tubulointerstitium
+    dataset_accession: demo_seed
+    pmid: "demo"
+    up: [COL1A1, COL1A2, COL3A1, FN1, ACTA2, TGFB1, SERPINE1, TIMP1]
+    down: [PPARA, PPARGC1A, ESRRA, CPT1A]
+  FSGS:
+    disease_name: Focal segmental glomerulosclerosis
+    compartment: glomerulus
+    dataset_accession: demo_seed
+    pmid: "demo"
+    up: [COL4A1, TGFB1, CCL2]
+    down: [NPHS1, NPHS2, PODXL, ACTN4]

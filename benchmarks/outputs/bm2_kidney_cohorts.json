@@ -1,0 +1,40 @@
+{
+  "cases": {
+    "DKD": {
+      "case": "DKD",
+      "n_positives": 35,
+      "pan_median_pct": 0.46598431851260624,
+      "pan_fold_top1": 0.0,
+      "renal_epi_median_pct": 0.41382224517582983,
+      "renal_epi_fold_top1": 0.0,
+      "kprl_median_pct": 0.45851917930419267,
+      "kprl_fold_top1": 0.0
+    },
+    "LN": {
+      "case": "LN",
+      "n_positives": 8,
+      "pan_median_pct": 0.44483309075543453,
+      "pan_fold_top1": 0.0,
+      "renal_epi_median_pct": 0.26463683741020705,
+      "renal_epi_fold_top1": 0.0,
+      "kprl_median_pct": 0.16503122212310437,
+      "kprl_fold_top1": 0.0
+    },
+    "CKD_fibrosis": {
+      "case": "CKD_fibrosis",
+      "n_positives": 9,
+      "pan_median_pct": 0.24766420958730456,
+      "pan_fold_top1": 262.9506172839506,
+      "renal_epi_median_pct": 0.7039767125217147,
+      "renal_epi_fold_top1": 0.0,
+      "kprl_median_pct": 0.5267383445232171,
+      "kprl_fold_top1": 0.0
+    }
+  },
+  "summary": {
+    "pan_median_pct": 0.38616053961844843,
+    "renal_epi_median_pct": 0.46081193170258383,
+    "kprl_median_pct": 0.3834295819835047,
+    "kprl_vs_pan_wilcoxon_p": 0.75
+  }
+}

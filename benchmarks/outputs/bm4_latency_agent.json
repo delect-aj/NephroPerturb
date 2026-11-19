@@ -1,0 +1,154 @@
+{
+  "latency": {
+    "signature": {
+      "p50_ms": 210.6,
+      "p95_ms": 259.4,
+      "min_ms": 208.6
+    },
+    "pathway_tf": {
+      "p50_ms": 171.4,
+      "p95_ms": 184.0,
+      "min_ms": 164.3
+    },
+    "compound": {
+      "p50_ms": 3.1,
+      "p95_ms": 3.2,
+      "min_ms": 3.0
+    },
+    "genetic_lookup": {
+      "p50_ms": 0.0,
+      "p95_ms": 0.0,
+      "min_ms": 0.0
+    }
+  },
+  "agent": {
+    "n": 20,
+    "accuracy": 1.0,
+    "details": [
+      {
+        "text": "\u4e3a DKD \u6848\u4f8b\u627e\u9006\u8f6c\u836f\u7269",
+        "expected": "SOP-6",
+        "predicted": "SOP-6",
+        "correct": true
+      },
+      {
+        "text": "\u8fd0\u884c\u72fc\u75ae\u80be\u708e\u6848\u4f8b",
+        "expected": "SOP-6",
+        "predicted": "SOP-6",
+        "correct": true
+      },
+      {
+        "text": "\u770b\u770b IgAN \u961f\u5217",
+        "expected": "SOP-6",
+        "predicted": "SOP-6",
+        "correct": true
+      },
+      {
+        "text": "AKI \u6807\u51c6\u7b7e\u540d\u8dd1\u4e00\u4e0b",
+        "expected": "SOP-6",
+        "predicted": "SOP-6",
+        "correct": true
+      },
+      {
+        "text": "CKD \u7ea4\u7ef4\u5316\u6848\u4f8b",
+        "expected": "SOP-6",
+        "predicted": "SOP-6",
+        "correct": true
+      },
+      {
+        "text": "FSGS \u6709\u54ea\u4e9b\u5019\u9009",
+        "expected": "SOP-6",
+        "predicted": "SOP-6",
+        "correct": true
+      },
+      {
+        "text": "\u8f93\u5165 SMILES \u63a8\u65ad\u673a\u5236",
+        "expected": "SOP-5",
+        "predicted": "SOP-5",
+        "correct": true
+      },
+      {
+        "text": "\u8fd9\u4e2a\u7ed3\u6784 CC(=O)OC1=CC=CC=C1C(=O)O \u50cf\u4ec0\u4e48\u836f",
+        "expected": "SOP-5",
+        "predicted": "SOP-5",
+        "correct": true
+      },
+      {
+        "text": "BRD-K81418486 \u7684 MoA \u662f\u4ec0\u4e48",
+        "expected": "SOP-5",
+        "predicted": "SOP-5",
+        "correct": true
+      },
+      {
+        "text": "\u6291\u5236 TGFb \u548c SMAD3\uff0c\u6fc0\u6d3b PPARA \u627e\u836f",
+        "expected": "SOP-3",
+        "predicted": "SOP-3",
+        "correct": true
+      },
+      {
+        "text": "\u67e5\u4e00\u4e0b NFKB1 \u901a\u8def\u5019\u9009",
+        "expected": "SOP-3",
+        "predicted": "SOP-3",
+        "correct": true
+      },
+      {
+        "text": "\u9700\u8981\u6291\u5236 STAT3 \u7684\u836f\u7269",
+        "expected": "SOP-3",
+        "predicted": "SOP-3",
+        "correct": true
+      },
+      {
+        "text": "HIF1A \u6fc0\u6d3b\u5242\u6709\u54ea\u4e9b",
+        "expected": "SOP-3",
+        "predicted": "SOP-3",
+        "correct": true
+      },
+      {
+        "text": "\u9776\u5411 TGFBR1 \u7684\u836f\u7269\u548c\u6572\u9664\u6a21\u62df",
+        "expected": "SOP-4",
+        "predicted": "SOP-4",
+        "correct": true
+      },
+      {
+        "text": "APOL1 \u7684\u9057\u4f20\u6270\u52a8",
+        "expected": "SOP-4",
+        "predicted": "SOP-4",
+        "correct": true
+      },
+      {
+        "text": "JAK2 \u9776\u70b9",
+        "expected": "SOP-4",
+        "predicted": "SOP-4",
+        "correct": true
+      },
+      {
+        "text": "HAVCR1 \u57fa\u56e0\u6572\u9664\u7b7e\u540d",
+        "expected": "SOP-4",
+        "predicted": "SOP-4",
+        "correct": true
+      },
+      {
+        "text": "dexamethasone \u7684\u80be\u810f\u753b\u50cf",
+        "expected": "SOP-2",
+        "predicted": "SOP-2",
+        "correct": true
+      },
+      {
+        "text": "\u67e5\u8be2 sirolimus \u8be6\u60c5",
+        "expected": "SOP-2",
+        "predicted": "SOP-2",
+        "correct": true
+      },
+      {
+        "text": "\u8fd9\u4e2a\u836f\u7269\u7684 MoA \u548c\u5b89\u5168\u4fe1\u606f",
+        "expected": "SOP-2",
+        "predicted": "SOP-2",
+        "correct": true
+      }
+    ]
+  },
+  "targets": {
+    "signature_p95_ms": 2000,
+    "agent_accuracy": 0.95
+  }
+}

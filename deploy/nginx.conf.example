@@ -1,0 +1,14 @@
+# Non-root Nginx template. Adjust server_name / ports for the site.
+server {
+    listen 8080;
+    server_name _;
+    client_max_body_size 20m;
+
+    location /api/       { proxy_pass http://127.0.0.1:8091; proxy_set_header Host $host; }
+    location /health     { proxy_pass http://127.0.0.1:8091; }
+    location /downloads/ { proxy_pass http://127.0.0.1:8091; }
+    location /mcp        { proxy_pass http://127.0.0.1:8092; proxy_http_version 1.1;
+                           proxy_set_header Upgrade $http_upgrade;
+                           proxy_set_header Connection "upgrade"; }
+    location /           { proxy_pass http://127.0.0.1:3000; proxy_set_header Host $host; }
+}

@@ -1,0 +1,12 @@
+{
+  "best_model": "elasticnet",
+  "auroc": 0.7484690106641327,
+  "auprc": 0.7986007409831267,
+  "auroc_lightgbm": 0.6119997888290571,
+  "auroc_elasticnet": 0.7484690106641327,
+  "balanced_accuracy": 0.6856192587899905,
+  "n_train": 395,
+  "n_positive": 231,
+  "n_features": 2861,
+  "cv": "5-fold GroupKFold by InChIKey-14"
+}

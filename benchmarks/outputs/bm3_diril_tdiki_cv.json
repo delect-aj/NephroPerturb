@@ -1,0 +1,60 @@
+{
+  "n_train": 395,
+  "n_positive": 231,
+  "transcriptome_only": [
+    0.534473656424876,
+    0.6132076558987805
+  ],
+  "structure_only": [
+    0.7811477140745434,
+    0.8389339741527113
+  ],
+  "dual_modality": [
+    0.7516893675430261,
+    0.8106863215359981
+  ],
+  "safety_filter": [
+    {
+      "case": "DKD",
+      "top50_known_nephrotoxic": 0,
+      "top50_after_tdiki_filter": 37,
+      "known_nephrotoxic_after": 0,
+      "reduction": 0
+    },
+    {
+      "case": "LN",
+      "top50_known_nephrotoxic": 0,
+      "top50_after_tdiki_filter": 31,
+      "known_nephrotoxic_after": 0,
+      "reduction": 0
+    },
+    {
+      "case": "IgAN",
+      "top50_known_nephrotoxic": 1,
+      "top50_after_tdiki_filter": 34,
+      "known_nephrotoxic_after": 1,
+      "reduction": 0
+    },
+    {
+      "case": "AKI",
+      "top50_known_nephrotoxic": 1,
+      "top50_after_tdiki_filter": 40,
+      "known_nephrotoxic_after": 1,
+      "reduction": 0
+    },
+    {
+      "case": "CKD_fibrosis",
+      "top50_known_nephrotoxic": 0,
+      "top50_after_tdiki_filter": 26,
+      "known_nephrotoxic_after": 0,
+      "reduction": 0
+    },
+    {
+      "case": "FSGS",
+      "top50_known_nephrotoxic": 0,
+      "top50_after_tdiki_filter": 36,
+      "known_nephrotoxic_after": 0,
+      "reduction": 0
+    }
+  ]
+}

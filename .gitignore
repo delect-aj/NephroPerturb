@@ -3,8 +3,15 @@ __pycache__/
 .env
 store/**/*.npy
 store/**/*.parquet
+store/**/*.npz
+store/**/*.joblib
+store/**/*.txt
 store/nephroperturb.db*
 store/downloads/
+store/annotations/raw/
+store/annotations/networks/
+store/annotations/meta/
 *.log
 node_modules/
 .next/
+store/models/*.json
