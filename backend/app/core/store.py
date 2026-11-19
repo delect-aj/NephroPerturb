@@ -92,6 +92,13 @@ class MatrixStore:
             self._expr = frame.set_index("entrez_id")
         return self._expr
 
+    @property
+    def fp_position(self):
+        """Row position in ecfp4_cp.npy (compounds.parquet order)."""
+        if not hasattr(self, "_fp_pos") or self._fp_pos is None:
+            self._fp_pos = {pid: i for i, pid in enumerate(self.compounds["pert_id"])}
+        return self._fp_pos
+
     def db(self):
         return sqlite3.connect(self.store / "nephroperturb.db", check_same_thread=False)
 

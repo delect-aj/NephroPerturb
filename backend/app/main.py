@@ -228,7 +228,7 @@ def similarity(req: StructureRequest):
         if comp is None:
             raise HTTPException(status_code=404, detail="compound not found")
         fps = np.load(store.store / "chem" / "ecfp4_cp.npy", mmap_mode="r")
-        query = np.asarray(fps[int(comp["matrix_row_idx"])], dtype=np.float32)
+        query = np.asarray(fps[store.fp_position[comp["pert_id"]]], dtype=np.float32)
     elif req.smiles:
         mol = Chem.MolFromSmiles(req.smiles)
         if mol is None:
@@ -252,15 +252,20 @@ def similarity(req: StructureRequest):
         for i in idx:
             hits.append((float(tani[i]), start + int(i)))
     hits = sorted(hits, reverse=True)[: req.top_k]
+    pert_ids = store.compounds["pert_id"].to_numpy()
     results = []
     for score, idx in hits:
-        pid = store.cp_index["pert_id"].iloc[idx]
+        pid = pert_ids[idx]
         row = store.compounds.loc[pid]
         if hasattr(row, "ndim") and row.ndim > 1:
             row = row.iloc[0]
-        results.append({"pert_id": pid, "pert_iname": row.get("pert_iname"),
-                        "tanimoto": score, "moa": row.get("moa"),
-                        "clinical_phase": row.get("clinical_phase")})
+        results.append({
+            "pert_id": pid,
+            "pert_iname": None if pd.isna(row.get("pert_iname")) else row.get("pert_iname"),
+            "tanimoto": score,
+            "moa": None if pd.isna(row.get("moa")) else row.get("moa"),
+            "clinical_phase": None if pd.isna(row.get("clinical_phase")) else row.get("clinical_phase"),
+        })
     return {"results": results}
 
 

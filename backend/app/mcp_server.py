@@ -13,6 +13,17 @@ mcp = MCPServer(
 )
 
 
+def _clean(value):
+    if value is None:
+        return None
+    try:
+        if value != value:  # NaN
+            return None
+    except Exception:
+        pass
+    return value
+
+
 @mcp.tool()
 def nephro_query_signature(up_genes: list[str], down_genes: list[str],
                            context: str = "kprl", gene_tier: str = "all",
@@ -82,7 +93,7 @@ def nephro_infer_moa(smiles: str | None = None, pert_id: str | None = None,
         if comp is None:
             return {"error": "compound not found"}
         fps = np.load(store.store / "chem" / "ecfp4_cp.npy", mmap_mode="r")
-        query = np.asarray(fps[int(comp["matrix_row_idx"])], dtype=np.float32)
+        query = np.asarray(fps[store.fp_position[comp["pert_id"]]], dtype=np.float32)
     elif smiles:
         mol = Chem.MolFromSmiles(smiles)
         if mol is None:
@@ -102,14 +113,17 @@ def nephro_infer_moa(smiles: str | None = None, pert_id: str | None = None,
         idx = np.argsort(-tani)[:top_k]
         hits.extend((float(tani[i]), start + int(i)) for i in idx)
     hits = sorted(hits, reverse=True)[:top_k]
+    pert_ids = store.compounds["pert_id"].to_numpy()
     results = []
     for score, idx in hits:
-        pid = store.cp_index["pert_id"].iloc[idx]
+        pid = pert_ids[idx]
         row = store.compounds.loc[pid]
         if hasattr(row, "ndim") and row.ndim > 1:
             row = row.iloc[0]
-        results.append({"pert_id": pid, "pert_iname": row.get("pert_iname"),
-                        "tanimoto": score, "moa": row.get("moa")})
+        results.append({"pert_id": pid,
+                        "pert_iname": _clean(row.get("pert_iname")),
+                        "tanimoto": score,
+                        "moa": _clean(row.get("moa"))})
     return {"results": results}
 
 
