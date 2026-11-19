@@ -1,0 +1,11 @@
+__pycache__/
+*.pyc
+.env
+store/nephroperturb.db*
+store/matrices/*.npy
+store/downloads/
+store/chem/*.parquet
+store/genes/
+*.log
+node_modules/
+.next/

@@ -1,0 +1,30 @@
+# NephroPerturb build settings
+paths:
+  data: /public/home/dongb/agent/data
+  level5: /public/home/dongb/agent/data/level5_source
+  share_lincs: /public/home/Shenglab/DataShare/ToDongbiao/LINCS
+  store: /public/home/dongb/agent/renalkb/store
+
+phases:
+  phase1:
+    matrix: GSE92742_Broad_LINCS_Level5_COMPZ.MODZ_n473647x12328.gctx
+    sig: GSE92742_Broad_LINCS_sig_info.txt.gz
+    gene: GSE92742_Broad_LINCS_gene_info.txt.gz
+    pert: GSE92742_Broad_LINCS_pert_info.txt.gz
+  phase2:
+    matrix: GSE70138_Broad_LINCS_Level5_COMPZ_n118050x12328_2017-03-06.gctx
+    sig: GSE70138_Broad_LINCS_sig_info_2017-03-06.txt.gz
+    gene: GSE70138_Broad_LINCS_gene_info_2017-03-06.txt.gz
+    pert: GSE70138_Broad_LINCS_pert_info_2017-03-06.txt.gz
+
+contexts:
+  renal_epi: [HA1E, HEK293T, NKDBA]
+  endothelial: [HUVEC]
+  immune: [THP1, U937, JURKAT, HL60]
+
+kprl:
+  kappa: 2.0
+  reliability_genes: bing   # bing | lm | all
+
+build:
+  cols_per_block: 4096
