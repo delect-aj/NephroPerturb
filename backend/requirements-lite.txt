@@ -1,0 +1,11 @@
+numpy
+pandas
+pyarrow
+pyyaml
+fastapi
+uvicorn[standard]
+pydantic>=2
+openai
+mcp
+python-multipart
+rdkit

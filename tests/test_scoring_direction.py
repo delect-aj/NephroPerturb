@@ -26,12 +26,17 @@ def main():
     assert comp is not None, "dexamethasone not in library"
     pid = comp["pert_id"]
     row = int(comp["matrix_row_idx"])
-    z = np.asarray(store.matrix("kprl")[row], dtype=np.float64)
-    assert np.isfinite(z).all(), "dexamethasone K-PRL row has non-finite values"
     genes = store.genes
-    order = np.argsort(-z)
-    up_syms = [str(genes["symbol"].iloc[i]) for i in order[:50]]
-    dn_syms = [str(genes["symbol"].iloc[i]) for i in order[::-1][:50]]
+    if store.is_lite:
+        tg = store.lite_top_genes()
+        up_syms = [str(genes["symbol"].iloc[int(i)]) for i in tg["up_idx"][row, :50]]
+        dn_syms = [str(genes["symbol"].iloc[int(i)]) for i in tg["dn_idx"][row, :50]]
+    else:
+        z = np.asarray(store.matrix("kprl")[row], dtype=np.float64)
+        assert np.isfinite(z).all(), "dexamethasone K-PRL row has non-finite values"
+        order = np.argsort(-z)
+        up_syms = [str(genes["symbol"].iloc[i]) for i in order[:50]]
+        dn_syms = [str(genes["symbol"].iloc[i]) for i in order[::-1][:50]]
 
     # Mimicry query: the disease state IS dexamethasone's own profile, so
     # dexamethasone must be penalized (negative renalconn).

@@ -52,7 +52,7 @@ export default function CasesPage() {
               <th>分期</th><th>T-DIKI</th><th>DIRIL</th></tr></thead>
               <tbody>{(data.results || []).map((r: any, i: number) => (
                 <tr key={r.pert_id}><td>{i + 1}</td>
-                  <td><Link href={`/compound/${r.pert_id}`}>{r.pert_iname || r.pert_id}</Link></td>
+                  <td><Link href={`/compound/?id=${encodeURIComponent(r.pert_id)}`}>{r.pert_iname || r.pert_id}</Link></td>
                   <td>{Number(r.rtps).toFixed(1)}</td><td>{Number(r.renalconn).toFixed(1)}</td>
                   <td className="small">{r.clinical_phase || "—"}</td>
                   <td>{r.tdiki_tier || "NA"}</td>

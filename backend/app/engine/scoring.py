@@ -1,22 +1,9 @@
-"""Deterministic scoring engine (scoring v2).
+"""Deterministic scoring engine (scoring v2 + Lite gene-major runtime support).
 
 Direction convention: every raw score is REVERSAL-POSITIVE (a high score means
 the compound reverses the disease signature). Calibration is an empirical
 signed percentile (tau in [-100, 100]) against a 600-signature real-biology
 background library built offline per context.
-
-Kernels
-  xsum  : classic truncated extreme-value XSum. Only the compound's top-500
-          (resp. bottom-500) genes keep their z-value, everything else is 0;
-          score = -(sum(Xext[up]) - sum(Xext[dn])) / (|up| + |dn|).
-  zhang : magnitude-ordered Zhang score. Per compound, s[d,g] = sign(z_d,g) *
-          (G - rank_abs[d,g] + 1); score = (sum_up(-s) + sum_dn(+s)) / bound,
-          bound = (|up|+|dn|) * G, strictly in [-1, 1].
-  wtcs  : bidirectional weighted KS enrichment (ES_up*ES_dn < 0 gate).
-  func  : pathway/TF/module projection with min_n >= 5 target coverage,
-          (pos - neg)/sqrt(sum w_hit^2) scaling, block L2 normalisation and
-          0.40 (PROGENy) : 0.30 (CollecTRI) : 0.30 (renal modules) mixture,
-          reversal = -cosine.
 """
 import hashlib
 import json
@@ -89,8 +76,8 @@ def _absranks_for(store, context):
     return _RANK_CACHE[key]
 
 
-def signed_es(ranks, idx, n_genes):
-    pos = np.sort(np.asarray(ranks[:, idx]), axis=1).astype(np.float32)
+def signed_es_sub(pos_unsorted, n_genes):
+    pos = np.sort(np.asarray(pos_unsorted), axis=1).astype(np.float32)
     k = pos.shape[1]
     j = np.arange(k, dtype=np.float32)[None, :]
     misses_before = pos - j
@@ -101,15 +88,15 @@ def signed_es(ranks, idx, n_genes):
     return np.where(np.abs(hi) >= np.abs(lo), hi, lo)
 
 
-def xsum_extreme(store, context, up_cols, dn_cols, top_n=EXTREME_TOP_N):
-    """Truncated extreme-value XSum (reversal-positive).
+def signed_es(ranks, idx, n_genes):
+    return signed_es_sub(ranks[:, idx], n_genes)
 
-    X_ext keeps a gene's z-value when it is among the compound's top-N OR
-    bottom-N extremes (all other genes are 0). A query gene therefore
-    contributes positively when the compound strongly up-regulates it and
-    negatively when the compound strongly down-regulates it, in both query
-    directions.
-    """
+
+def xsum_extreme(store, context, up_cols, dn_cols, top_n=EXTREME_TOP_N):
+    if store.is_lite:
+        return _score_single_context_lite(
+            store, up_cols, dn_cols, None, None, context, kernels=("xsum",)
+        )[0]["xsum"]
     matrix = store.matrix(context)
     ranks = _ranks_for(store, context)
     n_genes = matrix.shape[1]
@@ -124,7 +111,10 @@ def xsum_extreme(store, context, up_cols, dn_cols, top_n=EXTREME_TOP_N):
 
 
 def zhang_score(store, context, up_cols, dn_cols):
-    """Magnitude-ordered Zhang score (reversal-positive, in [-1, 1])."""
+    if store.is_lite:
+        return _score_single_context_lite(
+            store, up_cols, dn_cols, None, None, context, kernels=("zhang",)
+        )[0]["zhang"]
     matrix = store.matrix(context)
     absranks = _absranks_for(store, context)
     n_genes = matrix.shape[1]
@@ -141,6 +131,10 @@ def zhang_score(store, context, up_cols, dn_cols):
 
 
 def wtcs_score(store, context, up_cols, dn_cols):
+    if store.is_lite:
+        return _score_single_context_lite(
+            store, up_cols, dn_cols, None, None, context, kernels=("wtcs",)
+        )[0]["wtcs"]
     ranks = _ranks_for(store, context)
     n_genes = ranks.shape[1]
     es_up = signed_es(ranks, up_cols, n_genes)
@@ -148,25 +142,59 @@ def wtcs_score(store, context, up_cols, dn_cols):
     return np.where(np.sign(es_up) * np.sign(es_dn) < 0, -(es_up - es_dn) / 2.0, 0.0)
 
 
-def _load_networks():
-    nets = {}
+_NET_LOOKUP = {}
+_ACT_CACHE = {}
+
+
+def _get_net_lookup():
+    if _NET_LOOKUP:
+        return _NET_LOOKUP
     net_dir = get_store().store / "annotations" / "networks"
+    raw = {}
     for name, prefix in (("progeny", "pw"), ("collectri", "tf")):
         path = net_dir / f"{name}.csv"
         if path.exists():
             frame = pd.read_csv(path)
-            nets[prefix] = frame[["source", "target", "weight"]]
+            raw[prefix] = frame[["source", "target", "weight"]]
     modules = CONFIG / "renal_modules.yaml"
     if modules.exists():
         mod = yaml.safe_load(modules.read_text())["modules"]
         rows = [{"source": k, "target": g, "weight": 1.0}
                 for k, genes in mod.items() for g in genes]
-        nets["mod"] = pd.DataFrame(rows)
-    return nets
+        raw["mod"] = pd.DataFrame(rows)
+    for prefix, df in raw.items():
+        df = df.copy()
+        df["target_u"] = df["target"].astype(str).str.upper()
+        _NET_LOOKUP[prefix] = {
+            f"{prefix}_{source}": dict(zip(sub["target_u"], sub["weight"]))
+            for source, sub in df.groupby("source")
+        }
+    return _NET_LOOKUP
 
 
-_NET_CACHE = {}
-_ACT_CACHE = {}
+def _build_func_query_vectors(columns_by_prefix, up_symbols, down_symbols):
+    lookup = _get_net_lookup()
+    up = {str(s).upper() for s in up_symbols}
+    down = {str(s).upper() for s in down_symbols}
+    queries = {}
+    for prefix, columns in columns_by_prefix.items():
+        net_map = lookup.get(prefix, {})
+        query = np.zeros(len(columns), dtype=np.float32)
+        for col_idx, col in enumerate(columns):
+            w = net_map.get(col)
+            if not w:
+                continue
+            up_hits = [w[g] for g in up if g in w]
+            dn_hits = [w[g] for g in down if g in w]
+            if len(up_hits) + len(dn_hits) < FUNC_MIN_N:
+                continue
+            pos = sum(up_hits)
+            neg = sum(dn_hits)
+            norm = np.sqrt(sum(v * v for v in up_hits) + sum(v * v for v in dn_hits))
+            if norm > 0:
+                query[col_idx] = (pos - neg) / norm
+        queries[prefix] = query
+    return queries
 
 
 def _block_activities(store, context):
@@ -185,35 +213,18 @@ def _block_activities(store, context):
 
 
 def func_scores(store, up_symbols, down_symbols, context="kprl"):
-    """De-noised pathway/TF/module projection (reversal-positive)."""
-    global _NET_CACHE
-    if not _NET_CACHE:
-        _NET_CACHE = _load_networks()
-    up = {str(s).upper() for s in up_symbols}
-    down = {str(s).upper() for s in down_symbols}
+    if store.is_lite:
+        n_genes = len(store.genes)
+        return _score_single_context_lite(
+            store, None, None, up_symbols, down_symbols, context,
+            kernels=("func",), n_genes_override=n_genes
+        )[0]["func"]
     blocks = _block_activities(store, context)
+    cols_by_prefix = {p: blocks[p][0] for p in blocks}
+    queries = _build_func_query_vectors(cols_by_prefix, up_symbols, down_symbols)
     combined = np.zeros(len(store.cp_index), dtype=np.float32)
-    for prefix, net in _NET_CACHE.items():
-        columns, drug_acts = blocks[prefix]
-        net = net.copy()
-        net["target"] = net["target"].astype(str).str.upper()
-        query = np.zeros(len(columns), dtype=np.float32)
-        col_pos = {c: i for i, c in enumerate(columns)}
-        for source, sub in net.groupby("source"):
-            col = f"{prefix}_{source}"
-            if col not in col_pos:
-                continue
-            w = dict(zip(sub["target"], sub["weight"]))
-            up_hits = [(g, w[g]) for g in up if g in w]
-            dn_hits = [(g, w[g]) for g in down if g in w]
-            n_hits = len(up_hits) + len(dn_hits)
-            if n_hits < FUNC_MIN_N:
-                continue
-            pos = sum(v for _, v in up_hits)
-            neg = sum(v for _, v in dn_hits)
-            norm = np.sqrt(sum(v * v for _, v in up_hits) + sum(v * v for _, v in dn_hits))
-            if norm > 0:
-                query[col_pos[col]] = (pos - neg) / norm
+    for prefix, (_, drug_acts) in blocks.items():
+        query = queries[prefix]
         qn = np.linalg.norm(query)
         if qn == 0:
             continue
@@ -222,16 +233,14 @@ def func_scores(store, up_symbols, down_symbols, context="kprl"):
     return -combined
 
 
-def _quantile_tau(store, method, scores, context):
-    """Empirical signed percentile against the 600-signature background."""
-    table = store.tau_tables_for(context)
+def _quantile_tau_arr(table, method, scores):
     key = f"{method}_quantiles"
-    if key not in table.files:
-        raise RuntimeError(f"{key} missing in tau_null_tables_{context}.npz; rerun script 06")
-    q = table[key]                      # (n_compounds, 101) ascending
+    if key not in table:
+        raise RuntimeError(f"{key} missing in tau_quantiles; rerun script 06/09")
+    q = np.asarray(table[key], dtype=np.float32)  # (n_act, 101)
     s = np.asarray(scores, dtype=np.float32)
     n_q = q.shape[1]
-    below = (q < s[:, None]).sum(axis=1)          # 0..n_q
+    below = (q < s[:, None]).sum(axis=1)
     k = np.clip(below, 1, n_q - 1)
     lo = np.take_along_axis(q, (k - 1)[:, None], axis=1)[:, 0]
     hi = np.take_along_axis(q, k[:, None], axis=1)[:, 0]
@@ -241,6 +250,116 @@ def _quantile_tau(store, method, scores, context):
     pct = np.where(s <= q[:, 0], 0.0, np.where(s >= q[:, -1], 1.0,
                      ((k - 1) + frac) / (n_q - 1)))
     return ((2.0 * pct - 1.0) * 100.0).astype(np.float32)
+
+
+def _quantile_tau(store, method, scores, context):
+    if store.is_lite:
+        if context == "kprl":
+            tau_pan = _quantile_tau_arr(store.tau_tables_for("pan"), method, scores)
+            idx_d = store.lite_active_idx("kprl_delta")
+            tau_d = _quantile_tau_arr(store.tau_tables_for("kprl_delta"), method, scores[idx_d])
+            out = tau_pan.copy()
+            out[idx_d] = tau_d
+            return out
+        idx_a = store.lite_active_idx(context)
+        out = np.full(len(store.cp_index), -100.0, dtype=np.float32)
+        out[idx_a] = _quantile_tau_arr(store.tau_tables_for(context), method, scores[idx_a])
+        return out
+    table = store.tau_tables_for(context)
+    return _quantile_tau_arr(table, method, scores)
+
+
+def _lite_func_scores_ctx(store, ctx_dir_name, up_symbols, down_symbols):
+    fblk = store.lite_func_block(ctx_dir_name)
+    n_act = len(store.lite_active_idx(ctx_dir_name))
+    cols_by_prefix = {}
+    for fname, prefix in (("progeny", "pw"), ("collectri", "tf"), ("renal_modules", "mod")):
+        cols_by_prefix[prefix] = [f"{prefix}_{c}" for c in fblk[f"{fname}_cols"]]
+    queries = _build_func_query_vectors(cols_by_prefix, up_symbols, down_symbols)
+    combined = np.zeros(n_act, dtype=np.float32)
+    for fname, prefix in (("progeny", "pw"), ("collectri", "tf"), ("renal_modules", "mod")):
+        query = queries[prefix]
+        qn = np.linalg.norm(query)
+        if qn == 0:
+            continue
+        raw_arr = fblk[f"{fname}_raw"]  # (n_act, n_cols) float16
+        norms = fblk[f"{fname}_norm"]   # (n_act,) float32
+        dots = np.empty(n_act, dtype=np.float32)
+        for start in range(0, n_act, 4096):
+            end = min(start + 4096, n_act)
+            dots[start:end] = raw_arr[start:end].astype(np.float32) @ query
+        cos = dots / (np.maximum(norms, 1e-9) * qn)
+        combined += FUNC_BLOCK_WEIGHTS[prefix] * cos
+    return -combined
+
+
+def _score_lite_dir(store, ctx_dir_name, up_cols, dn_cols, up_symbols, dn_symbols,
+                    kernels=METHODS, compute_tau=True):
+    n_genes = len(store.genes)
+    n_act = len(store.lite_active_idx(ctx_dir_name))
+    raw = {}
+    if "xsum" in kernels:
+        acc_up = store.lite_sum_xsum_cols(ctx_dir_name, up_cols)
+        acc_dn = store.lite_sum_xsum_cols(ctx_dir_name, dn_cols)
+        denom = max(len(up_cols) + len(dn_cols), 1)
+        raw["xsum"] = -(acc_up - acc_dn) / denom
+    if "zhang" in kernels:
+        z_up = store.lite_read_zhang_cols(ctx_dir_name, up_cols).astype(np.int32).sum(axis=1) / 127.0
+        z_dn = store.lite_read_zhang_cols(ctx_dir_name, dn_cols).astype(np.int32).sum(axis=1) / 127.0
+        denom = max(len(up_cols) + len(dn_cols), 1)
+        raw["zhang"] = ((-z_up + z_dn) / denom).astype(np.float32)
+    if "wtcs" in kernels:
+        r_up = store.lite_read_ranks_cols(ctx_dir_name, up_cols)
+        r_dn = store.lite_read_ranks_cols(ctx_dir_name, dn_cols)
+        es_up = signed_es_sub(r_up, n_genes)
+        es_dn = signed_es_sub(r_dn, n_genes)
+        raw["wtcs"] = np.where(np.sign(es_up) * np.sign(es_dn) < 0,
+                               -(es_up - es_dn) / 2.0, 0.0).astype(np.float32)
+    if "func" in kernels:
+        raw["func"] = _lite_func_scores_ctx(store, ctx_dir_name, up_symbols, dn_symbols)
+
+    tau = {}
+    if compute_tau:
+        table = store.tau_tables_for(ctx_dir_name)
+        for m in kernels:
+            tau[m] = _quantile_tau_arr(table, m, raw[m])
+    return raw, tau, n_act
+
+
+def _score_single_context_lite(store, up_cols, dn_cols, up_symbols, dn_symbols,
+                               context, kernels=METHODS, compute_tau=True,
+                               n_genes_override=None):
+    n_cp = len(store.cp_index)
+    if context == "kprl":
+        raw, tau, _ = _score_lite_dir(
+            store, "pan", up_cols, dn_cols, up_symbols, dn_symbols, kernels, compute_tau
+        )
+        raw_d, tau_d, _ = _score_lite_dir(
+            store, "kprl_delta", up_cols, dn_cols, up_symbols, dn_symbols, kernels, compute_tau
+        )
+        idx_d = store.lite_active_idx("kprl_delta")
+        for m in kernels:
+            raw[m][idx_d] = raw_d[m]
+            if compute_tau:
+                tau[m][idx_d] = tau_d[m]
+        return raw, tau
+
+    raw_a, tau_a, _ = _score_lite_dir(
+        store, context, up_cols, dn_cols, up_symbols, dn_symbols, kernels, compute_tau
+    )
+    if context == "pan":
+        return raw_a, tau_a
+    idx_a = store.lite_active_idx(context)
+    raw, tau = {}, {}
+    for m in kernels:
+        r_full = np.zeros(n_cp, dtype=np.float32)
+        r_full[idx_a] = raw_a[m]
+        raw[m] = r_full
+        if compute_tau:
+            t_full = np.full(n_cp, -100.0, dtype=np.float32)
+            t_full[idx_a] = tau_a[m]
+            tau[m] = t_full
+    return raw, tau
 
 
 def _resolve(store, up, down, gene_tier):
@@ -269,13 +388,19 @@ def _signature_scores(store, up_cols, dn_cols, context, disease=None, compartmen
     tau_acc = {m: None for m in METHODS}
     conn_acc = None
     for ctx in contexts:
-        raw = {
-            "xsum": xsum_extreme(store, ctx, up_cols, dn_cols).astype(np.float32),
-            "zhang": zhang_score(store, ctx, up_cols, dn_cols).astype(np.float32),
-            "wtcs": wtcs_score(store, ctx, up_cols, dn_cols).astype(np.float32),
-            "func": func_scores(store, up_symbols, dn_symbols, ctx),
-        }
-        tau = {m: _quantile_tau(store, m, raw[m], ctx) for m in METHODS}
+        if store.is_lite:
+            raw, tau = _score_single_context_lite(
+                store, up_cols, dn_cols, up_symbols, dn_symbols, ctx,
+                kernels=METHODS, compute_tau=True
+            )
+        else:
+            raw = {
+                "xsum": xsum_extreme(store, ctx, up_cols, dn_cols).astype(np.float32),
+                "zhang": zhang_score(store, ctx, up_cols, dn_cols).astype(np.float32),
+                "wtcs": wtcs_score(store, ctx, up_cols, dn_cols).astype(np.float32),
+                "func": func_scores(store, up_symbols, dn_symbols, ctx),
+            }
+            tau = {m: _quantile_tau(store, m, raw[m], ctx) for m in METHODS}
         conn = sum(weights[m] * tau[m] for m in METHODS) / len(contexts)
         for m in METHODS:
             raw_acc[m] = raw[m] if raw_acc[m] is None else raw_acc[m] + raw[m]
@@ -349,7 +474,6 @@ def score_signature(up, down, context="kprl", gene_tier="all", compartment=None,
         allowed = {"Low"} if filters["max_diki_tier"] == "Low" else {"Low", "Moderate"}
         result = result[result["tdiki_tier"].isin(allowed) | result["tdiki_tier"].isna()]
     if filters.get("clinical_override"):
-        # DIRIL-positive compounds are never allowed into the "safe" shortlist
         result = result[~(result["diril_label"] == 1)]
 
     result = result.sort_values("rtps", ascending=False).head(top_k)
@@ -360,6 +484,7 @@ def score_signature(up, down, context="kprl", gene_tier="all", compartment=None,
     provenance = {
         "generated_at": datetime.now(timezone.utc).isoformat(),
         "engine": ENGINE_VERSION,
+        "store_mode": "lite" if store.is_lite else "full",
         "context": context,
         "gene_tier": gene_tier,
         "compartment": compartment,
@@ -376,24 +501,80 @@ def score_signature(up, down, context="kprl", gene_tier="all", compartment=None,
     return {"results": records, "provenance": provenance}
 
 
-def score_pathway_tf(targets: dict, top_k=20, context="kprl"):
-    store = get_store()
-    blocks = [store.func_matrix(name, context).reindex(store.cp_index["pert_id"])
-              for name in ("progeny", "collectri", "renal_modules")]
-    acts = pd.concat(blocks, axis=1)
+def _lite_pathway_tf_matrix(store, targets: dict, context: str):
+    """Extract only requested target columns in Lite mode without duplicating full tables."""
+    n_cp = len(store.cp_index)
+    if context == "kprl":
+        base = store.lite_func_block("pan")
+        delta = store.lite_func_block("kprl_delta")
+        idx_d = store.lite_active_idx("kprl_delta")
+    else:
+        base = store.lite_func_block(context)
+        idx_a = store.lite_active_idx(context) if context != "pan" else None
+        delta = None
+
+    col_lookup = {}
+    for fname, prefix in (("progeny", "pw"), ("collectri", "tf"), ("renal_modules", "mod")):
+        cols = [str(c) for c in base[f"{fname}_cols"]]
+        for j, raw_name in enumerate(cols):
+            full_name = f"{prefix}_{raw_name}"
+            col_lookup[full_name] = (fname, j)
+            col_lookup.setdefault(raw_name.upper(), []).append((full_name, fname, j))
+
     available, missing = {}, []
+    vecs = []
     for key, direction in targets.items():
-        if key in acts.columns:
-            available[key] = float(direction)
+        hit = None
+        if key in col_lookup and isinstance(col_lookup[key], tuple):
+            fname, j = col_lookup[key]
+            hit = (key, fname, j)
         else:
-            matches = [c for c in acts.columns if c.split("_", 1)[1].upper() == key.upper()]
-            if matches:
-                available[matches[0]] = float(direction)
-            else:
-                missing.append(key)
+            matches = col_lookup.get(key.upper())
+            if isinstance(matches, list) and matches:
+                hit = matches[0]
+        if not hit:
+            missing.append(key)
+            continue
+        full_name, fname, j = hit
+        available[full_name] = float(direction)
+        if context == "kprl":
+            v = base[f"{fname}_raw"][:, j].astype(np.float32)
+            v[idx_d] = delta[f"{fname}_raw"][:, j].astype(np.float32)
+        elif context == "pan":
+            v = base[f"{fname}_raw"][:, j].astype(np.float32)
+        else:
+            v = np.zeros(n_cp, dtype=np.float32)
+            v[idx_a] = base[f"{fname}_raw"][:, j].astype(np.float32)
+        vecs.append(v)
+
     if not available:
         raise ValueError(f"no known pathway/TF in {list(targets)}")
-    sub = acts[list(available)].fillna(0.0).to_numpy(dtype=np.float32)
+    sub = np.column_stack(vecs).astype(np.float32)
+    return sub, available, missing
+
+
+def score_pathway_tf(targets: dict, top_k=20, context="kprl"):
+    store = get_store()
+    if store.is_lite:
+        sub, available, missing = _lite_pathway_tf_matrix(store, targets, context)
+    else:
+        blocks = [store.func_matrix(name, context).reindex(store.cp_index["pert_id"])
+                  for name in ("progeny", "collectri", "renal_modules")]
+        acts = pd.concat(blocks, axis=1)
+        available, missing = {}, []
+        for key, direction in targets.items():
+            if key in acts.columns:
+                available[key] = float(direction)
+            else:
+                matches = [c for c in acts.columns if c.split("_", 1)[1].upper() == key.upper()]
+                if matches:
+                    available[matches[0]] = float(direction)
+                else:
+                    missing.append(key)
+        if not available:
+            raise ValueError(f"no known pathway/TF in {list(targets)}")
+        sub = acts[list(available)].fillna(0.0).to_numpy(dtype=np.float32)
+
     std = sub.std(axis=0) + 1e-6
     z = sub / std
     direction = np.array([available[c] for c in available], dtype=np.float32)

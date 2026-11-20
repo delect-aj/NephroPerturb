@@ -36,7 +36,7 @@ NEPHRO_MCP_TRANSPORT=streamable-http NEPHRO_MCP_PORT=8092 deploy/run_mcp.sh
 # 客户端配置（Claude Desktop / 任意 MCP 客户端）
 {
   "mcpServers": {
-    "nephroperturb": { "url": "http://<host>:8092/mcp" }
+    "nephroperturb": { "url": "http://<host>:8091/mcp"   // 单进程 Lite 模式为 :8091/mcp；独立进程为 :8092/mcp }
   }
 }`}</pre>
         <table style={{ marginTop: 10 }}><thead><tr><th>工具</th><th>用途</th></tr></thead><tbody>

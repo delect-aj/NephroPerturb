@@ -1,6 +1,9 @@
-"""NephroPerturb REST API (OpenAPI 3.1 via FastAPI)."""
+"""NephroPerturb REST API (OpenAPI 3.1 via FastAPI) + optional unified MCP & static UI."""
+from contextlib import asynccontextmanager
 import hashlib
 import json
+import os
+import threading
 import uuid
 from datetime import datetime, timezone
 from pathlib import Path
@@ -10,21 +13,55 @@ import numpy as np
 import pandas as pd
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import FileResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field
+from starlette.routing import Route
 
 from .agent import route as agent_route, summarize as agent_summarize
 from .core.store import get_store
 from .engine import tdiki as tdiki_explain
+from .engine.lookup import structure_similarity_search, target_mimicry_top
 from .engine.scoring import score_pathway_tf, score_signature
 
-app = FastAPI(title="NephroPerturb API", version="1.0.0")
+_MOUNT_MCP = os.environ.get("NEPHRO_MOUNT_MCP", "0") == "1"
+_STATIC_DIR = os.environ.get("NEPHRO_STATIC_DIR", "").strip()
+_COMPUTE_LOCK = threading.Lock()
+
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    if _MOUNT_MCP:
+        from .mcp_server import mcp
+        async with mcp.session_manager.run():
+            yield
+    else:
+        yield
+
+
+app = FastAPI(title="NephroPerturb API", version="1.0.0", lifespan=lifespan)
 app.add_middleware(CORSMiddleware, allow_origins=["*"], allow_methods=["*"],
                    allow_headers=["*"])
 
 _DOWNLOADS_DIR = get_store().store / "downloads"
-if _DOWNLOADS_DIR.exists():
-    app.mount("/downloads", StaticFiles(directory=str(_DOWNLOADS_DIR)), name="downloads")
+
+
+@app.get("/downloads/{filename}")
+def download_file(filename: str):
+    base = _DOWNLOADS_DIR.resolve()
+    target = (base / filename).resolve()
+    if target.parent != base or not target.is_file():
+        raise HTTPException(status_code=404, detail="download not found")
+    return FileResponse(path=str(target), filename=target.name)
+
+if _MOUNT_MCP:
+    from .mcp_server import create_mcp_asgi_app
+    _mcp_sub = create_mcp_asgi_app("/mcp")
+    for _r in _mcp_sub.routes:
+        if getattr(_r, "path", None) == "/mcp":
+            app.router.routes.append(_r)
+            app.router.routes.append(Route("/mcp/", endpoint=_r.endpoint,
+                                           methods=getattr(_r, "methods", None)))
 
 
 class SignatureRequest(BaseModel):
@@ -63,7 +100,10 @@ class SummarizeRequest(BaseModel):
 @app.get("/health")
 def health():
     store = get_store()
-    return {"status": "ok", "compounds": int(len(store.cp_index)),
+    return {"status": "ok",
+            "mode": "lite" if store.is_lite else "full",
+            "mcp_mounted": _MOUNT_MCP,
+            "compounds": int(len(store.cp_index)),
             "matrices": ["kprl", "pan", "renal_epi", "renal_endo", "renal_immune"]}
 
 
@@ -89,11 +129,12 @@ def persist_job(store, sop_id, params, result, llm_used=0):
 @app.post("/api/v1/query/signature")
 def query_signature(req: SignatureRequest):
     try:
-        result = score_signature(req.up_genes, req.down_genes, context=req.context,
-                                 gene_tier=req.gene_tier,
-                                 compartment=req.kidney_compartment,
-                                 weights=req.weights, filters=req.filters,
-                                 top_k=req.top_k)
+        with _COMPUTE_LOCK:
+            result = score_signature(req.up_genes, req.down_genes, context=req.context,
+                                     gene_tier=req.gene_tier,
+                                     compartment=req.kidney_compartment,
+                                     weights=req.weights, filters=req.filters,
+                                     top_k=req.top_k)
     except ValueError as exc:
         raise HTTPException(status_code=422, detail=str(exc))
     result["job_id"] = persist_job(get_store(), "SOP-1", req.model_dump(), result)
@@ -103,7 +144,8 @@ def query_signature(req: SignatureRequest):
 @app.post("/api/v1/query/pathway-tf")
 def query_pathway_tf(req: PathwayRequest):
     try:
-        result = score_pathway_tf(req.targets, top_k=req.top_k)
+        with _COMPUTE_LOCK:
+            result = score_pathway_tf(req.targets, top_k=req.top_k)
     except ValueError as exc:
         raise HTTPException(status_code=422, detail=str(exc))
     result["job_id"] = persist_job(get_store(), "SOP-3", req.model_dump(), result)
@@ -113,22 +155,30 @@ def query_pathway_tf(req: PathwayRequest):
 @app.get("/api/v1/compound/{token}")
 def compound_profile(token: str, top_genes: int = 12):
     store = get_store()
-    comp = store.find_compound(token)
+    comp = store.get_compound_detail(token)
     if comp is None:
         raise HTTPException(status_code=404, detail="compound not found")
     pid = comp["pert_id"]
     row = int(comp["matrix_row_idx"])
-    matrix = store.matrix("kprl")
-    profile = np.asarray(matrix[row])
-    order = np.argsort(-profile)
     genes = store.genes
-    up = [{"symbol": genes["symbol"].iloc[i], "z": float(profile[i])}
-          for i in order[:top_genes]]
-    dn = [{"symbol": genes["symbol"].iloc[i], "z": float(profile[i])}
-          for i in order[::-1][:top_genes]]
+
+    if store.is_lite:
+        tg = store.lite_top_genes()
+        k = min(int(top_genes), tg["up_idx"].shape[1])
+        up = [{"symbol": genes["symbol"].iloc[int(tg["up_idx"][row, j])],
+               "z": float(tg["up_z"][row, j])} for j in range(k)]
+        dn = [{"symbol": genes["symbol"].iloc[int(tg["dn_idx"][row, j])],
+               "z": float(tg["dn_z"][row, j])} for j in range(k)]
+    else:
+        matrix = store.matrix("kprl")
+        profile = np.asarray(matrix[row])
+        order = np.argsort(-profile)
+        up = [{"symbol": genes["symbol"].iloc[i], "z": float(profile[i])}
+              for i in order[:top_genes]]
+        dn = [{"symbol": genes["symbol"].iloc[i], "z": float(profile[i])}
+              for i in order[::-1][:top_genes]]
 
     brothers = store.compounds[store.compounds["inchikey14"] == comp.get("inchikey14")]
-    targets = []
     con = store.db()
     try:
         targets = pd.read_sql(
@@ -144,12 +194,29 @@ def compound_profile(token: str, top_genes: int = 12):
                       for k, v in expr.loc[key].items()})
 
     func = {}
-    for name in ("progeny", "collectri", "renal_modules"):
-        frame = store.func_matrix(name)
-        if pid in frame.index:
-            vals = frame.loc[pid].astype(float)
-            func[name] = (vals.sort_values(ascending=False).head(10).round(3)
-                          .to_dict()) if name == "renal_modules" else vals.round(3).to_dict()
+    if store.is_lite:
+        idx_d = store.lite_active_idx("kprl_delta")
+        pos_d = np.searchsorted(idx_d, row)
+        if pos_d < len(idx_d) and int(idx_d[pos_d]) == row:
+            fblk = store.lite_func_block("kprl_delta")
+            f_row = int(pos_d)
+        else:
+            fblk = store.lite_func_block("pan")
+            f_row = row
+        for name, prefix in (("progeny", "pw"), ("collectri", "tf"), ("renal_modules", "mod")):
+            cols = [f"{prefix}_{c}" for c in fblk[f"{name}_cols"]]
+            vals = fblk[f"{name}_raw"][f_row].astype(float)
+            s = pd.Series(vals, index=cols)
+            func[name] = (s.sort_values(ascending=False).head(10).round(3).to_dict()
+                          if name == "renal_modules" else s.round(3).to_dict())
+    else:
+        for name in ("progeny", "collectri", "renal_modules"):
+            frame = store.func_matrix(name)
+            if pid in frame.index:
+                vals = frame.loc[pid].astype(float)
+                func[name] = (vals.sort_values(ascending=False).head(10).round(3)
+                              .to_dict()) if name == "renal_modules" else vals.round(3).to_dict()
+
     return {
         "compound": json.loads(comp.to_frame().T.to_json(orient="records"))[0],
         "scaffold_siblings": brothers["pert_id"].tolist(),
@@ -193,81 +260,38 @@ def target_profile(symbol: str, top_k: int = 50):
         drugs = pd.read_sql(
             "SELECT pert_id, target_symbol, moa FROM drug_targets WHERE UPPER(target_symbol)=?",
             con, params=(symbol.upper(),))
+        if store.is_lite:
+            ko_rows = pd.read_sql(
+                "SELECT pert_id, pert_type, n_sigs FROM perturbations_genetic WHERE UPPER(pert_iname)=?",
+                con, params=(symbol.upper(),)).to_dict("records")
+        else:
+            genetic = store.genetic_index_map()
+            ko = genetic[genetic["pert_iname"].fillna("").str.upper() == symbol.upper()]
+            ko_rows = ko[["pert_id", "pert_type", "n_sigs"]].to_dict("records")
     finally:
         con.close()
-    genetic = store.genetic_index_map()
-    ko = genetic[genetic["pert_iname"].fillna("").str.upper() == symbol.upper()]
-    mimic = []
-    if len(ko):
-        gen_mat = np.load(store.store / "matrices" / "genetic_consensus.npy", mmap_mode="r")
-        kprl = store.matrix("kprl")
-        ko_rows = ko["matrix_row_idx"].astype(int).tolist()[:3]
-        ko_vec = np.mean([np.asarray(gen_mat[r]) for r in ko_rows], axis=0)
-        sims = []
-        for start in range(0, kprl.shape[0], 4000):
-            block = np.asarray(kprl[start:start + 4000])
-            num = block @ ko_vec
-            den = np.linalg.norm(block, axis=1) * (np.linalg.norm(ko_vec) + 1e-9)
-            sims.append(num / (den + 1e-9))
-        sims = np.concatenate(sims)
-        idx = np.argsort(-sims)[:top_k]
-        mimic = [{"pert_id": store.cp_index["pert_id"].iloc[i],
-                  "pert_iname": store.cp_index["pert_iname"].iloc[i],
-                  "similarity": float(sims[i])} for i in idx]
+
+    with _COMPUTE_LOCK:
+        mimic = target_mimicry_top(symbol, top_k=top_k)
     return {"gene": gene.to_dict(), "kidney_expression": expression,
             "targeting_drugs": drugs.to_dict("records"),
-            "genetic_perturbations": ko[["pert_id", "pert_type", "n_sigs"]].to_dict("records"),
+            "genetic_perturbations": ko_rows,
             "mimicking_compounds": mimic}
 
 
 @app.post("/api/v1/similarity/structure")
 def similarity(req: StructureRequest):
-    store = get_store()
-    from rdkit import Chem
-    from rdkit.Chem import rdFingerprintGenerator
-    if req.pert_id:
-        comp = store.find_compound(req.pert_id)
-        if comp is None:
-            raise HTTPException(status_code=404, detail="compound not found")
-        fps = np.load(store.store / "chem" / "ecfp4_cp.npy", mmap_mode="r")
-        query = np.asarray(fps[store.fp_position[comp["pert_id"]]], dtype=np.float32)
-    elif req.smiles:
-        mol = Chem.MolFromSmiles(req.smiles)
-        if mol is None:
-            raise HTTPException(status_code=422, detail="invalid SMILES")
-        gen = rdFingerprintGenerator.GetMorganGenerator(radius=2, fpSize=2048)
-        query = np.frombuffer(gen.GetFingerprint(mol).ToBitString().encode(),
-                              dtype=np.uint8) - ord("0")
-        query = query.astype(np.float32)
-    else:
-        raise HTTPException(status_code=422, detail="provide smiles or pert_id")
-
-    fps = np.load(store.store / "chem" / "ecfp4_cp.npy", mmap_mode="r")
-    qsum = query.sum()
-    hits = []
-    for start in range(0, fps.shape[0], 4000):
-        block = np.asarray(fps[start:start + 4000], dtype=np.float32)
-        inter = block @ query
-        union = block.sum(axis=1) + qsum - inter
-        tani = inter / np.maximum(union, 1)
-        idx = np.argsort(-tani)[: req.top_k]
-        for i in idx:
-            hits.append((float(tani[i]), start + int(i)))
-    hits = sorted(hits, reverse=True)[: req.top_k]
-    pert_ids = store.compounds["pert_id"].to_numpy()
-    results = []
-    for score, idx in hits:
-        pid = pert_ids[idx]
-        row = store.compounds.loc[pid]
-        if hasattr(row, "ndim") and row.ndim > 1:
-            row = row.iloc[0]
-        results.append({
-            "pert_id": pid,
-            "pert_iname": None if pd.isna(row.get("pert_iname")) else row.get("pert_iname"),
-            "tanimoto": score,
-            "moa": None if pd.isna(row.get("moa")) else row.get("moa"),
-            "clinical_phase": None if pd.isna(row.get("clinical_phase")) else row.get("clinical_phase"),
-        })
+    try:
+        with _COMPUTE_LOCK:
+            results = structure_similarity_search(
+                smiles=req.smiles, pert_id=req.pert_id, top_k=req.top_k
+            )
+    except LookupError as exc:
+        raise HTTPException(status_code=404, detail=str(exc))
+    except ValueError as exc:
+        raise HTTPException(status_code=422, detail=str(exc))
+    except NotImplementedError as exc:
+        raise HTTPException(status_code=501, detail=str(exc))
     return {"results": results}
 
 
@@ -297,9 +321,10 @@ def get_case(case_id: str):
     up = json.loads(row["up_genes_json"])
     down = json.loads(row["down_genes_json"])
     disease_code = row["disease_code"] if "disease_code" in row.index else None
-    result = score_signature(up, down, context="auto",
-                             disease=disease_code,
-                             compartment=row["compartment"], top_k=25)
+    with _COMPUTE_LOCK:
+        result = score_signature(up, down, context="auto",
+                                 disease=disease_code,
+                                 compartment=row["compartment"], top_k=25)
     result["case"] = json.loads(frame.to_json(orient="records"))[0]
     result["job_id"] = persist_job(get_store(), "SOP-6", {"case_id": case_id}, result)
     return result
@@ -337,3 +362,20 @@ def downloads():
                       "sha256": _DOWNLOAD_CACHE[key],
                       "url": f"/downloads/{path.name}"})
     return {"downloads": items}
+
+
+if _STATIC_DIR and Path(_STATIC_DIR).is_dir():
+    @app.get("/compound/{token}")
+    def _redirect_compound(token: str):
+        return RedirectResponse(url=f"/compound/?id={token}")
+
+    @app.get("/target/{symbol}")
+    def _redirect_target(symbol: str):
+        return RedirectResponse(url=f"/target/?symbol={symbol}")
+
+    @app.get("/downloads")
+    @app.get("/downloads/")
+    def _downloads_page():
+        return FileResponse(str(Path(_STATIC_DIR) / "downloads" / "index.html"))
+
+    app.mount("/", StaticFiles(directory=_STATIC_DIR, html=True), name="static_ui")

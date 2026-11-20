@@ -8,7 +8,8 @@ import sys
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
-URL = "http://127.0.0.1:8092/mcp"
+import os
+URL = os.environ.get("NEPHRO_MCP_URL", "http://127.0.0.1:8092/mcp")
 REQUIRED = {"nephro_query_signature", "nephro_profile_compound",
             "nephro_query_pathway_tf", "nephro_target_mimicry",
             "nephro_infer_moa", "nephro_list_renal_cases"}

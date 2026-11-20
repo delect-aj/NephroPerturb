@@ -67,7 +67,7 @@ export default function Home() {
         <div className="grid cols-3">
           <Link href="/workbench">签名逆转工作台</Link>
           <Link href="/pathway-tf">通路与 TF 组合寻药</Link>
-          <Link href="/target/TGFBR1">靶基因与遗传印证</Link>
+          <Link href="/target/?symbol=TGFBR1">靶基因与遗传印证</Link>
           <Link href="/downloads">下载 K-PRL / GMT 数据包</Link>
           <Link href="/docs">REST 与 MCP 接入文档</Link>
           <Link href="/cases">DKD / LN / IgAN / AKI / CKD 案例</Link>

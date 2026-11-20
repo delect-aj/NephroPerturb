@@ -20,10 +20,15 @@ def main():
     comp = store.find_compound("dexamethasone")
     assert comp is not None
     row = int(comp["matrix_row_idx"])
-    z = np.asarray(store.matrix("kprl")[row], dtype=np.float64)
-    order = np.argsort(-z)
-    up = list(order[:150])
-    dn = list(order[::-1][:150])
+    if store.is_lite:
+        tg = store.lite_top_genes()
+        up = [int(i) for i in tg["up_idx"][row, :50]]
+        dn = [int(i) for i in tg["dn_idx"][row, :50]]
+    else:
+        z = np.asarray(store.matrix("kprl")[row], dtype=np.float64)
+        order = np.argsort(-z)
+        up = list(order[:150])
+        dn = list(order[::-1][:150])
     up_sym = store.genes.iloc[up]["symbol"].tolist()
     dn_sym = store.genes.iloc[dn]["symbol"].tolist()
 

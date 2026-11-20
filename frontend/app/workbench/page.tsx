@@ -178,7 +178,7 @@ export default function Workbench() {
                 {(data.results || []).map((r: any, i: number) => (
                   <tr key={r.pert_id} onClick={() => setSelected(r)} style={{ cursor: "pointer" }}>
                     <td>{i + 1}</td>
-                    <td><Link href={`/compound/${r.pert_id}`} onClick={(e) => e.stopPropagation()}>
+                    <td><Link href={`/compound/?id=${encodeURIComponent(r.pert_id)}`} onClick={(e) => e.stopPropagation()}>
                       {r.pert_iname || r.pert_id}</Link>
                       <div className="small muted mono">{r.pert_id}</div></td>
                     <td className="small">{r.clinical_phase || "—"}</td>

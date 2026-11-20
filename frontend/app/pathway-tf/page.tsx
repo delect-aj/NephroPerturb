@@ -60,7 +60,7 @@ export default function PathwayTF() {
             <table><thead><tr><th>#</th><th>化合物</th><th>评分</th><th>分期</th><th>T-DIKI</th></tr></thead>
               <tbody>{(data.results || []).map((r: any, i: number) => (
                 <tr key={r.pert_id}><td>{i + 1}</td>
-                  <td><Link href={`/compound/${r.pert_id}`}>{r.pert_iname || r.pert_id}</Link></td>
+                  <td><Link href={`/compound/?id=${encodeURIComponent(r.pert_id)}`}>{r.pert_iname || r.pert_id}</Link></td>
                   <td>{Number(r.pathway_tf_score).toFixed(2)}</td>
                   <td className="small">{r.clinical_phase || "—"}</td>
                   <td><span className={`badge ${r.tdiki_tier === "High" ? "red" : r.tdiki_tier === "Moderate" ? "amber" : "green"}`}>

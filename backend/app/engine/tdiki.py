@@ -1,5 +1,5 @@
-"""T-DIKI v2 explanation: structure-expert contributions plus the renal-cell
-toxicology probability and the gated final risk."""
+"""T-DIKI v2 explanation: instant SQLite lookup in lite/precomputed mode,
+falling back to joblib struct model if tdiki_explain table is absent."""
 import json
 
 import numpy as np
@@ -12,18 +12,14 @@ _MODEL = {}
 
 def _load():
     if "cal" not in _MODEL:
+        import joblib
         store = get_store()
-        _MODEL["cal"] = joblib_load(store)
+        _MODEL["cal"] = joblib.load(store.store / "models" / "tdiki_v2_struct.joblib")
         _MODEL["struct"] = pd.read_parquet(
             store.store / "chem" / "tdiki_v2_struct.parquet").set_index("pert_id")
         _MODEL["tdiki"] = pd.read_parquet(
             store.store / "matrices" / "tdiki_cp.parquet").set_index("pert_id")
     return _MODEL
-
-
-def joblib_load(store):
-    import joblib
-    return joblib.load(store.store / "models" / "tdiki_v2_struct.joblib")
 
 
 def _base_estimator(cal):
@@ -33,6 +29,34 @@ def _base_estimator(cal):
 
 
 def explain(pert_id, top_n=10):
+    store = get_store()
+    con = store.db()
+    try:
+        cur = con.execute(
+            "SELECT name FROM sqlite_master WHERE type='table' AND name='tdiki_explain'"
+        )
+        if cur.fetchone() is not None:
+            row = con.execute(
+                "SELECT tdiki_struct, tdiki_prob, tdiki_tier, tdiki_tx, contributions_json "
+                "FROM tdiki_explain WHERE pert_id = ?",
+                (pert_id,),
+            ).fetchone()
+            if row is not None:
+                contribs = json.loads(row[4] or "[]")[:top_n]
+                return {
+                    "pert_id": pert_id,
+                    "tdiki_struct": row[0],
+                    "tdiki_prob": row[1],
+                    "tdiki_tier": row[2],
+                    "tdiki_tx": row[3],
+                    "contributions": contribs,
+                }
+    finally:
+        con.close()
+
+    if store.is_lite:
+        raise KeyError(f"{pert_id} has no precomputed structural explanation")
+
     M = _load()
     if pert_id not in M["struct"].index:
         raise KeyError(f"{pert_id} has no structural features")

@@ -1,0 +1,22 @@
+# Install to ~/.config/systemd/user/nephroperturb-lite.service (no root)
+# Enable: systemctl --user daemon-reload && systemctl --user enable --now nephroperturb-lite
+[Unit]
+Description=NephroPerturb Lite (Single-Process API + MCP + Static Web UI)
+After=network.target
+
+[Service]
+Type=simple
+WorkingDirectory=%h/renalkb
+Environment=ROOT=%h/renalkb
+ExecStart=%h/renalkb/deploy/run_lite.sh
+Restart=always
+RestartSec=3
+
+# Hard 1-core and <=1 GB RAM guardrails
+CPUQuota=100%
+AllowedCPUs=0
+MemoryHigh=850M
+MemoryMax=1024M
+
+[Install]
+WantedBy=default.target
