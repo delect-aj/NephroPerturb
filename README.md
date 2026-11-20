@@ -84,3 +84,4 @@ summarizes returned tables. Every score is deterministic; without
 Run `python benchmarks/bm*.py`; outputs land in `benchmarks/outputs/`.
 BM-1 MoA retrieval, BM-2 kidney cohort recovery, BM-3 T-DIKI modality ablation
 and safety interception, BM-4 latency + 0-LLM SOP routing.
+# NephroPerturb
