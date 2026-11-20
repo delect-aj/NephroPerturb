@@ -111,11 +111,11 @@ export default function Workbench() {
             <div>
               <label>扰动上下文</label>
               <select value={context} onChange={(e) => setContext(e.target.value)}>
-                <option value="kprl">K-PRL（肾脏收缩）</option>
-                <option value="pan">Pan-Cell 全局</option>
-                <option value="renal_epi">HA1E 肾上皮</option>
-                <option value="renal_endo">血管内皮</option>
-                <option value="renal_immune">免疫炎症</option>
+                <option value="kprl">K-PRL（肾脏收缩，通用）</option>
+                <option value="pan">Pan-Cell 全局（系统药效）</option>
+                <option value="renal_epi">HA1E 肾上皮（小管损伤/纤维化）</option>
+                <option value="renal_endo">血管内皮（肾小球/血管病变）</option>
+                <option value="renal_immune">免疫炎症（LN/IgAN 免疫性肾病）</option>
               </select>
             </div>
             <div>

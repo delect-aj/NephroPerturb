@@ -157,6 +157,8 @@ def compound_profile(token: str, top_genes: int = 12):
         "targets": targets, "functional_activity": func,
         "tdiki": {"prob": float(comp.get("tdiki_prob") or 0),
                   "tier": comp.get("tdiki_tier") or "NA",
+                  "struct": None if pd.isna(comp.get("tdiki_struct")) else float(comp.get("tdiki_struct")),
+                  "tx": None if pd.isna(comp.get("tdiki_tx")) else float(comp.get("tdiki_tx")),
                   "diril_label": None if pd.isna(comp.get("diril_label")) else int(comp["diril_label"])},
     }
 
@@ -294,7 +296,10 @@ def get_case(case_id: str):
     row = frame.iloc[0]
     up = json.loads(row["up_genes_json"])
     down = json.loads(row["down_genes_json"])
-    result = score_signature(up, down, compartment=row["compartment"], top_k=25)
+    disease_code = row["disease_code"] if "disease_code" in row.index else None
+    result = score_signature(up, down, context="auto",
+                             disease=disease_code,
+                             compartment=row["compartment"], top_k=25)
     result["case"] = json.loads(frame.to_json(orient="records"))[0]
     result["job_id"] = persist_job(get_store(), "SOP-6", {"case_id": case_id}, result)
     return result

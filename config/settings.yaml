@@ -23,8 +23,13 @@ contexts:
   immune: [THP1, U937, JURKAT, HL60]
 
 kprl:
-  kappa: 0.5
+  kappa: 20
   reliability_genes: bing   # bing | lm | all
 
 build:
   cols_per_block: 4096
+
+scoring:
+  weights: {xsum: 0.25, zhang: 0.25, wtcs: 0.25, func: 0.25}
+  default_context: kprl
+  case_routing: auto

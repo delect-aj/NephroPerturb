@@ -1,60 +1,362 @@
 {
-  "n_train": 395,
-  "n_positive": 231,
-  "transcriptome_only": [
-    0.534473656424876,
-    0.6132076558987805
+  "ablation": {
+    "structure_only": {
+      "auroc": 0.7598194488438392,
+      "auprc": 0.8264943684575173,
+      "brier": 0.1987828628389301
+    },
+    "tx_only": {
+      "auroc": 0.5159566043712385,
+      "auprc": 0.6295092249574938,
+      "brier": 0.26464490202287366,
+      "n": 395
+    },
+    "gated_dual": {
+      "oof_auroc": 0.7564407137577869,
+      "mode": "structure_only_protective",
+      "n": 395
+    }
+  },
+  "safety": [
+    {
+      "cohort": "DKD_glom",
+      "disease": "DKD",
+      "n_clinical_space": 2167,
+      "top50_known_bad_before": 19,
+      "top50_known_bad_after": 21,
+      "bad_reduction": -2,
+      "bad_rate_before": 0.38,
+      "bad_rate_after": 0.42,
+      "tierA_good_before": 0,
+      "tierA_good_after": 0,
+      "tierA_retention": null,
+      "high_tdiki_before": 16,
+      "high_tdiki_after": 0,
+      "pains_before": 4,
+      "pains_after": 4,
+      "list_kept": 1438
+    },
+    {
+      "cohort": "DKD_tub",
+      "disease": "DKD",
+      "n_clinical_space": 2167,
+      "top50_known_bad_before": 24,
+      "top50_known_bad_after": 27,
+      "bad_reduction": -3,
+      "bad_rate_before": 0.48,
+      "bad_rate_after": 0.54,
+      "tierA_good_before": 0,
+      "tierA_good_after": 0,
+      "tierA_retention": null,
+      "high_tdiki_before": 16,
+      "high_tdiki_after": 0,
+      "pains_before": 1,
+      "pains_after": 0,
+      "list_kept": 1439
+    },
+    {
+      "cohort": "LN_glom",
+      "disease": "LN",
+      "n_clinical_space": 2167,
+      "top50_known_bad_before": 30,
+      "top50_known_bad_after": 27,
+      "bad_reduction": 3,
+      "bad_rate_before": 0.6,
+      "bad_rate_after": 0.54,
+      "tierA_good_before": 1,
+      "tierA_good_after": 0,
+      "tierA_retention": 0.0,
+      "high_tdiki_before": 18,
+      "high_tdiki_after": 0,
+      "pains_before": 4,
+      "pains_after": 5,
+      "list_kept": 1437
+    },
+    {
+      "cohort": "LN_tub",
+      "disease": "LN",
+      "n_clinical_space": 2167,
+      "top50_known_bad_before": 24,
+      "top50_known_bad_after": 26,
+      "bad_reduction": -2,
+      "bad_rate_before": 0.48,
+      "bad_rate_after": 0.52,
+      "tierA_good_before": 1,
+      "tierA_good_after": 0,
+      "tierA_retention": 0.0,
+      "high_tdiki_before": 14,
+      "high_tdiki_after": 0,
+      "pains_before": 5,
+      "pains_after": 5,
+      "list_kept": 1439
+    },
+    {
+      "cohort": "CKD",
+      "disease": "CKD",
+      "n_clinical_space": 2167,
+      "top50_known_bad_before": 23,
+      "top50_known_bad_after": 22,
+      "bad_reduction": 1,
+      "bad_rate_before": 0.46,
+      "bad_rate_after": 0.44,
+      "tierA_good_before": 2,
+      "tierA_good_after": 0,
+      "tierA_retention": 0.0,
+      "high_tdiki_before": 20,
+      "high_tdiki_after": 0,
+      "pains_before": 5,
+      "pains_after": 4,
+      "list_kept": 1439
+    },
+    {
+      "cohort": "LN2",
+      "disease": "LN",
+      "n_clinical_space": 2167,
+      "top50_known_bad_before": 27,
+      "top50_known_bad_after": 28,
+      "bad_reduction": -1,
+      "bad_rate_before": 0.54,
+      "bad_rate_after": 0.56,
+      "tierA_good_before": 3,
+      "tierA_good_after": 1,
+      "tierA_retention": 0.333,
+      "high_tdiki_before": 28,
+      "high_tdiki_after": 0,
+      "pains_before": 6,
+      "pains_after": 6,
+      "list_kept": 1438
+    },
+    {
+      "cohort": "AKI",
+      "disease": "AKI",
+      "n_clinical_space": 2167,
+      "top50_known_bad_before": 23,
+      "top50_known_bad_after": 21,
+      "bad_reduction": 2,
+      "bad_rate_before": 0.46,
+      "bad_rate_after": 0.42,
+      "tierA_good_before": 0,
+      "tierA_good_after": 0,
+      "tierA_retention": null,
+      "high_tdiki_before": 25,
+      "high_tdiki_after": 0,
+      "pains_before": 7,
+      "pains_after": 5,
+      "list_kept": 1438
+    },
+    {
+      "cohort": "ERCB_DKD_glom",
+      "disease": "DKD",
+      "n_clinical_space": 2167,
+      "top50_known_bad_before": 21,
+      "top50_known_bad_after": 21,
+      "bad_reduction": 0,
+      "bad_rate_before": 0.42,
+      "bad_rate_after": 0.42,
+      "tierA_good_before": 1,
+      "tierA_good_after": 0,
+      "tierA_retention": 0.0,
+      "high_tdiki_before": 10,
+      "high_tdiki_after": 0,
+      "pains_before": 1,
+      "pains_after": 1,
+      "list_kept": 1438
+    },
+    {
+      "cohort": "ERCB_IgAN_glom",
+      "disease": "IgAN",
+      "n_clinical_space": 2167,
+      "top50_known_bad_before": 30,
+      "top50_known_bad_after": 30,
+      "bad_reduction": 0,
+      "bad_rate_before": 0.6,
+      "bad_rate_after": 0.6,
+      "tierA_good_before": 1,
+      "tierA_good_after": 0,
+      "tierA_retention": 0.0,
+      "high_tdiki_before": 24,
+      "high_tdiki_after": 0,
+      "pains_before": 3,
+      "pains_after": 2,
+      "list_kept": 1438
+    },
+    {
+      "cohort": "ERCB_LN_glom",
+      "disease": "LN",
+      "n_clinical_space": 2167,
+      "top50_known_bad_before": 29,
+      "top50_known_bad_after": 30,
+      "bad_reduction": -1,
+      "bad_rate_before": 0.58,
+      "bad_rate_after": 0.6,
+      "tierA_good_before": 2,
+      "tierA_good_after": 0,
+      "tierA_retention": 0.0,
+      "high_tdiki_before": 23,
+      "high_tdiki_after": 0,
+      "pains_before": 3,
+      "pains_after": 3,
+      "list_kept": 1438
+    }
   ],
-  "structure_only": [
-    0.7811477140745434,
-    0.8389339741527113
+  "aggregate": {
+    "bad_rate_before": 0.5,
+    "bad_rate_after": 0.506,
+    "tierA_retention": 0.04757142857142858,
+    "high_tdiki_before": 19.4,
+    "high_tdiki_after": 0.0,
+    "pains_before": 3.9,
+    "pains_after": 3.5,
+    "n_cohorts": 10,
+    "bad_reduction_total": -3
+  },
+  "clinical_space_size": 2661,
+  "evidence_sources": [
+    "ctd",
+    "faers"
   ],
-  "dual_modality": [
-    0.7516893675430261,
-    0.8106863215359981
-  ],
-  "safety_filter": [
+  "design": {
+    "cutoff": 0.66,
+    "known_bad": "DIRIL-positive OR SIDER/CTD/FAERS renal AE evidence",
+    "space": "approved+launched+phase I-III, InChIKey-14 collapsed",
+    "retention": "Tier-A good drugs present in Top-50 after / before"
+  },
+  "posthoc_quantile_diagnostic": {
+    "threshold_quantile": 0.9,
+    "rows": [
+      {
+        "cohort": "DKD_glom",
+        "bad_before": 3,
+        "bad_after": 3,
+        "good_before": 0,
+        "good_after": 0
+      },
+      {
+        "cohort": "DKD_tub",
+        "bad_before": 12,
+        "bad_after": 12,
+        "good_before": 0,
+        "good_after": 0
+      },
+      {
+        "cohort": "LN_glom",
+        "bad_before": 13,
+        "bad_after": 13,
+        "good_before": 0,
+        "good_after": 0
+      },
+      {
+        "cohort": "LN_tub",
+        "bad_before": 9,
+        "bad_after": 10,
+        "good_before": 0,
+        "good_after": 0
+      },
+      {
+        "cohort": "CKD",
+        "bad_before": 7,
+        "bad_after": 8,
+        "good_before": 0,
+        "good_after": 0
+      },
+      {
+        "cohort": "LN2",
+        "bad_before": 13,
+        "bad_after": 12,
+        "good_before": 2,
+        "good_after": 1
+      },
+      {
+        "cohort": "AKI",
+        "bad_before": 13,
+        "bad_after": 11,
+        "good_before": 0,
+        "good_after": 0
+      },
+      {
+        "cohort": "ERCB_DKD_glom",
+        "bad_before": 9,
+        "bad_after": 9,
+        "good_before": 0,
+        "good_after": 0
+      },
+      {
+        "cohort": "ERCB_IgAN_glom",
+        "bad_before": 16,
+        "bad_after": 14,
+        "good_before": 0,
+        "good_after": 0
+      },
+      {
+        "cohort": "ERCB_LN_glom",
+        "bad_before": 11,
+        "bad_after": 10,
+        "good_before": 0,
+        "good_after": 0
+      }
+    ],
+    "label": "post-hoc diagnostic only; deployed cutoff stays 0.66 per plan"
+  },
+  "posthoc_diril_only_diagnostic": [
     {
-      "case": "DKD",
-      "top50_known_nephrotoxic": 0,
-      "top50_after_tdiki_filter": 37,
-      "known_nephrotoxic_after": 0,
-      "reduction": 0
+      "cohort": "DKD_glom",
+      "diril_bad_before": 0,
+      "diril_bad_after_066": 1,
+      "diril_bad_after_q90": 0
     },
     {
-      "case": "LN",
-      "top50_known_nephrotoxic": 0,
-      "top50_after_tdiki_filter": 31,
-      "known_nephrotoxic_after": 0,
-      "reduction": 0
+      "cohort": "DKD_tub",
+      "diril_bad_before": 0,
+      "diril_bad_after_066": 0,
+      "diril_bad_after_q90": 0
     },
     {
-      "case": "IgAN",
-      "top50_known_nephrotoxic": 1,
-      "top50_after_tdiki_filter": 34,
-      "known_nephrotoxic_after": 1,
-      "reduction": 0
+      "cohort": "LN_glom",
+      "diril_bad_before": 3,
+      "diril_bad_after_066": 1,
+      "diril_bad_after_q90": 2
     },
     {
-      "case": "AKI",
-      "top50_known_nephrotoxic": 1,
-      "top50_after_tdiki_filter": 40,
-      "known_nephrotoxic_after": 1,
-      "reduction": 0
+      "cohort": "LN_tub",
+      "diril_bad_before": 2,
+      "diril_bad_after_066": 1,
+      "diril_bad_after_q90": 3
     },
     {
-      "case": "CKD_fibrosis",
-      "top50_known_nephrotoxic": 0,
-      "top50_after_tdiki_filter": 26,
-      "known_nephrotoxic_after": 0,
-      "reduction": 0
+      "cohort": "CKD",
+      "diril_bad_before": 1,
+      "diril_bad_after_066": 0,
+      "diril_bad_after_q90": 2
     },
     {
-      "case": "FSGS",
-      "top50_known_nephrotoxic": 0,
-      "top50_after_tdiki_filter": 36,
-      "known_nephrotoxic_after": 0,
-      "reduction": 0
+      "cohort": "LN2",
+      "diril_bad_before": 4,
+      "diril_bad_after_066": 1,
+      "diril_bad_after_q90": 2
+    },
+    {
+      "cohort": "AKI",
+      "diril_bad_before": 2,
+      "diril_bad_after_066": 1,
+      "diril_bad_after_q90": 0
+    },
+    {
+      "cohort": "ERCB_DKD_glom",
+      "diril_bad_before": 0,
+      "diril_bad_after_066": 0,
+      "diril_bad_after_q90": 0
+    },
+    {
+      "cohort": "ERCB_IgAN_glom",
+      "diril_bad_before": 5,
+      "diril_bad_after_066": 1,
+      "diril_bad_after_q90": 3
+    },
+    {
+      "cohort": "ERCB_LN_glom",
+      "diril_bad_before": 4,
+      "diril_bad_after_066": 1,
+      "diril_bad_after_q90": 3
     }
   ]
 }

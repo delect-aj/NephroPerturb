@@ -34,6 +34,7 @@ def add_indexes(con):
 
 
 def build_cases(store):
+    """Real GEO cohort cases with full provenance (Stage-2 QC-passed)."""
     with open(ROOT / "config" / "renal_cases.yaml") as fh:
         cases = yaml.safe_load(fh)["cases"]
     rows = []
@@ -41,9 +42,17 @@ def build_cases(store):
         rows.append({
             "case_id": case_id,
             "disease_name": c["disease_name"],
+            "disease_code": c.get("disease_code"),
             "compartment": c["compartment"],
-            "dataset_accession": c.get("dataset_accession"),
+            "dataset_accession": c.get("dataset_accession") or c.get("gse"),
             "pmid": c.get("pmid"),
+            "gse": c.get("gse"),
+            "study_id": c.get("study_id"),
+            "platform": c.get("platform"),
+            "n_disease": c.get("n_disease"),
+            "n_control": c.get("n_control"),
+            "matrix_sha256": c.get("matrix_sha256"),
+            "top_n": c.get("top_n"),
             "up_genes_json": json.dumps(c["up"]),
             "down_genes_json": json.dumps(c["down"]),
         })
@@ -92,9 +101,10 @@ def main():
             on="pert_id", how="left")
     tdiki_path = store / "matrices" / "tdiki_cp.parquet"
     if tdiki_path.exists():
-        compounds = compounds.merge(
-            pd.read_parquet(tdiki_path)[["pert_id", "tdiki_prob", "tdiki_tier"]],
-            on="pert_id", how="left")
+        tdiki_cols = ["pert_id", "tdiki_prob", "tdiki_tier"]
+        tdiki_frame = pd.read_parquet(tdiki_path)
+        tdiki_cols += [c for c in ("tdiki_struct", "tdiki_tx") if c in tdiki_frame.columns]
+        compounds = compounds.merge(tdiki_frame[tdiki_cols], on="pert_id", how="left")
     compounds.to_sql("compounds", con, if_exists="replace", index=False,
                      method="multi", chunksize=2000)
 
@@ -156,6 +166,12 @@ def main():
         targets = targets[["pert_id", "target_symbol", "entrez_id", "moa"]].drop_duplicates()
         targets.to_sql("drug_targets", con, if_exists="replace", index=False,
                        method="multi", chunksize=5000)
+
+    evidence_path = ann / "clinical_diki_evidence.parquet"
+    if evidence_path.exists():
+        pd.read_parquet(evidence_path).to_sql(
+            "clinical_diki_evidence", con, if_exists="replace", index=False,
+            method="multi", chunksize=5000)
 
     expr_path = ann / "kidney_expression.parquet"
     if expr_path.exists():

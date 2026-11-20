@@ -28,12 +28,14 @@ export default function CasesPage() {
   return (
     <>
       <div className="page-head"><h1>肾病经典案例库</h1></div>
-      <div className="sub">内置演示签名用于端到端复现；正式分析建议替换为自有队列 DEG。</div>
+      <div className="sub">真实人源肾活检队列（GEO series matrix，经 QC：组样本量、基因映射覆盖率与生物学阳性通路校验），含平台、疾病/对照数与校验和溯源。</div>
       <div className="grid cols-3">
         {cases.map((c) => (
           <div className="card" key={c.case_id}>
             <h2>{c.case_id} · {c.disease_name}</h2>
-            <div className="small muted">区室：{c.compartment} · 来源：{c.dataset_accession} / {c.pmid}</div>
+            <div className="small muted">区室：{c.compartment} · {c.gse || c.dataset_accession} · {c.platform || "—"}</div>
+            <div className="small muted">疾病 n={c.n_disease ?? "—"} / 对照 n={c.n_control ?? "—"} · PMID {c.pmid || "—"}</div>
+            {c.matrix_sha256 && <div className="small muted mono">sha256 {String(c.matrix_sha256).slice(0, 16)}…</div>}
             <div className="row" style={{ marginTop: 10 }}>
               <button onClick={() => run(c.case_id)} disabled={loading}>运行逆转检索</button>
             </div>

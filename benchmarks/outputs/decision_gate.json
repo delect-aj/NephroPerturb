@@ -1,0 +1,31 @@
+{
+  "date": "2026-11-20",
+  "branch": "A",
+  "rule": "Branch A: compartment_matched (or kprl ensemble) significantly better than pan_ensemble at cohort/study level and better than unsplit500 (pre-registered, Tier-A primary, no tuning)",
+  "tier_a_full_cohort_level": {
+    "compartment_matched_vs_pan_ensemble": 0.0078125,
+    "compartment_matched_vs_unsplit500_pan": 0.001953125,
+    "kprl_ensemble_vs_pan_ensemble": 0.275390625,
+    "kprl_ensemble_vs_pan_wtcs": 0.013671875
+  },
+  "tier_a_full_study_level": {
+    "compartment_matched_vs_pan_ensemble": 0.03125,
+    "compartment_matched_vs_unsplit500_pan": 0.015625,
+    "kprl_ensemble_vs_pan_ensemble": 0.21875
+  },
+  "deployed": {
+    "case_routing": "auto compartment-matched (LN/IgAN/FSGS -> renal_immune+renal_epi; tubulointerstitial/AKI/CKD -> renal_epi; systemic metabolic -> pan)",
+    "free_query_default_context": "kprl",
+    "weights": "equal 0.25 ensemble",
+    "kappa": 20.0,
+    "kernel_note": "BM-1 Pool B prefers single WTCS for compound-profile MoA retrieval, but BM-2 (the product task) prefers the equal ensemble (kprl_ensemble > pan_wtcs, p=0.0137); the equal ensemble stays and WTCS-only remains available as a lens."
+  },
+  "bm3_summary": {
+    "structure_oof_auroc": 0.7598,
+    "tx_only_auroc": 0.516,
+    "gated": "structure_only_protective (fused not better)",
+    "diril_bad_top50_before": 21,
+    "diril_bad_top50_after_066": 7,
+    "note": "broader FAERS/SIDER flags saturate; Tier-A retention target not met (documented failure)"
+  }
+}

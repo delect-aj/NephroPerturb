@@ -37,7 +37,9 @@ class MatrixStore:
         self._matrices = {}
         self._func = {}
         self._ranks = None
-        self._tau = None
+        self._tau = {}
+        self._expr_cp = None
+        self._mimic_cp = None
         self._alias = None
         self._expr = None
         self._targets = None
@@ -61,18 +63,42 @@ class MatrixStore:
 
     @property
     def tau_tables(self):
-        if self._tau is None:
-            self._tau = np.load(self.store / "matrices" / "tau_null_tables.npz")
-        return self._tau
+        return self.tau_tables_for("kprl")
 
-    def func_matrix(self, name):
-        if name not in self._func:
-            frame = pd.read_parquet(self.store / "matrices" / f"{name}_cp.parquet")
-            frame = frame.set_index("pert_id")
-            prefix = {"progeny": "pw", "collectri": "tf", "renal_modules": "mod"}[name]
+    def tau_tables_for(self, context="kprl"):
+        """Random-gene-set null tables are built per context by script 06."""
+        if context not in self._tau:
+            self._tau[context] = np.load(
+                self.store / "matrices" / f"tau_null_tables_{context}.npz")
+        return self._tau[context]
+
+    FUNC_PREFIX = {"progeny": "pw", "collectri": "tf", "renal_modules": "mod"}
+
+    def func_matrix(self, name, context="kprl"):
+        key = (name, context)
+        if key not in self._func:
+            path = self.store / "matrices" / f"{name}_{context}.parquet"
+            if not path.exists():
+                path = self.store / "matrices" / f"{name}_cp.parquet"
+            frame = pd.read_parquet(path).set_index("pert_id")
+            prefix = self.FUNC_PREFIX[name]
             frame.columns = [f"{prefix}_{c}" for c in frame.columns]
-            self._func[name] = frame
-        return self._func[name]
+            self._func[key] = frame
+        return self._func[key]
+
+    @property
+    def expr_kidney_cp(self):
+        if not hasattr(self, "_expr_cp") or self._expr_cp is None:
+            self._expr_cp = pd.read_parquet(
+                self.store / "matrices" / "expr_kidney_cp.parquet").set_index("pert_id")
+        return self._expr_cp
+
+    @property
+    def genetic_mimicry_cp(self):
+        if not hasattr(self, "_mimic_cp") or self._mimic_cp is None:
+            self._mimic_cp = pd.read_parquet(
+                self.store / "matrices" / "genetic_mimicry_cp.parquet").set_index("pert_id")
+        return self._mimic_cp
 
     @property
     def aliases(self):
@@ -104,15 +130,24 @@ class MatrixStore:
 
     # ---- resolution ----
     def resolve_genes(self, symbols):
+        """Resolve symbols/aliases to matrix columns; order preserved, deduped."""
         upper = {s.upper(): i for i, s in enumerate(self.genes["symbol"])}
         entrez_to_col = dict(zip(self.genes["entrez_id"], self.genes["matrix_col_idx"]))
-        found, missing = [], []
+        found, missing, seen = [], [], set()
         for symbol in symbols:
             token = str(symbol).strip()
             col = upper.get(token.upper())
-            if col is None and token in self.aliases:
-                col = entrez_to_col.get(str(self.aliases[token]))
-            (found if col is not None else missing).append(col if col is not None else token)
+            if col is None:
+                entrez = self.aliases.get(token.lower())
+                if entrez is not None:
+                    col = entrez_to_col.get(str(entrez))
+            if col is None:
+                missing.append(token)
+                continue
+            if col in seen:
+                continue
+            seen.add(col)
+            found.append(col)
         return found, missing
 
     def find_compound(self, token):

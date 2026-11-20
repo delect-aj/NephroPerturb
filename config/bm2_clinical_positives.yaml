@@ -1,0 +1,101 @@
+# BM-2 Tier-A clinical positive truth table (pre-registered 2026-11-20).
+#
+# These are guideline / high-evidence nephro-protective drugs per disease.
+# They are FROZEN before the Stage-2 evaluation runs; BM-2 maps each name to
+# the in-library pert_id(s) and reports availability. No name is added or
+# removed after seeing results. Tier-B (Repurposing Hub indication keyword
+# matching, used earlier) is kept only as a transparent sensitivity analysis.
+#
+# refs: short pointer to the pivotal trial/guideline for the indication.
+
+tier_a:
+  DKD:
+    - {name: losartan, ref: "RENAAL (NEJM 2001); KDIGO CKD 2024"}
+    - {name: valsartan, ref: "MARVAL (NEJM 2001)"}
+    - {name: irbesartan, ref: "IDNT (NEJM 2001)"}
+    - {name: candesartan, ref: "CALM study"}
+    - {name: telmisartan, ref: "ONTARGET renal outcomes"}
+    - {name: olmesartan, ref: "ROADMAP"}
+    - {name: captopril, ref: "Lewis NEJM 1993"}
+    - {name: lisinopril, ref: "AIPRI"}
+    - {name: enalapril, ref: "AIPRI / meta-analyses"}
+    - {name: ramipril, ref: "MICRO-HOPE"}
+    - {name: canagliflozin, ref: "CREDENCE (NEJM 2019)"}
+    - {name: dapagliflozin, ref: "DAPA-CKD (NEJM 2020)"}
+    - {name: empagliflozin, ref: "EMPA-KIDNEY (NEJM 2023)"}
+    - {name: spironolactone, ref: "MRA trials; KDIGO CKD 2024"}
+    - {name: eplerenone, ref: "EVALUATE-HF renal; KDIGO CKD 2024"}
+    - {name: metformin, ref: "KDIGO diabetes-in-CKD guidance"}
+    - {name: pioglitazone, ref: "meta-analyses in DKD"}
+    - {name: pentoxifylline, ref: "PREDIAN (JASN 2015)"}
+    - {name: pirfenidone, ref: "diabetic nephropathy phase 2"}
+    - {name: baricitinib, ref: "diabetic kidney disease phase 2"}
+    - {name: bardoxolone-methyl, ref: "BEACON / CARDINAL (bardoxolone)"}
+  CKD:
+    - {name: losartan, ref: "RENAAL; KDIGO CKD 2024"}
+    - {name: valsartan, ref: "KDIGO CKD 2024"}
+    - {name: irbesartan, ref: "IDNT"}
+    - {name: candesartan, ref: "CALM"}
+    - {name: telmisartan, ref: "ONTARGET"}
+    - {name: olmesartan, ref: "ROADMAP"}
+    - {name: captopril, ref: "Lewis NEJM 1993"}
+    - {name: lisinopril, ref: "AIPRI"}
+    - {name: enalapril, ref: "AIPRI"}
+    - {name: ramipril, ref: "MICRO-HOPE"}
+    - {name: canagliflozin, ref: "CREDENCE"}
+    - {name: dapagliflozin, ref: "DAPA-CKD"}
+    - {name: empagliflozin, ref: "EMPA-KIDNEY"}
+    - {name: finerenone, ref: "FIDELIO-DKD / FIGARO (nonsteroidal MRA)"}
+    - {name: spironolactone, ref: "KDIGO CKD 2024"}
+    - {name: eplerenone, ref: "KDIGO CKD 2024"}
+  LN:
+    - {name: dexamethasone, ref: "glucocorticoid backbone, KDIGO LN 2021"}
+    - {name: prednisolone, ref: "KDIGO LN 2021"}
+    - {name: prednisone, ref: "KDIGO LN 2021"}
+    - {name: methylprednisolone, ref: "KDIGO LN 2021"}
+    - {name: hydrocortisone, ref: "glucocorticoid class"}
+    - {name: mycophenolate-mofetil, ref: "ALMS (NEJM 2005); KDIGO LN 2021"}
+    - {name: mycophenolic-acid, ref: "ALMS; KDIGO LN 2021"}
+    - {name: azathioprine, ref: "KDIGO LN 2021"}
+    - {name: cyclophosphamide, ref: "Euro-Lupus (NEJM 2002); KDIGO LN 2021"}
+    - {name: tacrolimus, ref: "LN maintenance trials"}
+    - {name: cyclosporine, ref: "LN rescue trials"}
+    - {name: hydroxychloroquine, ref: "KDIGO LN 2021 adjunct"}
+    - {name: sirolimus, ref: "mTOR inhibitor LN trials"}
+    - {name: everolimus, ref: "mTOR inhibitor LN trials"}
+    - {name: methotrexate, ref: "KDIGO LN 2021"}
+    - {name: leflunomide, ref: "LN induction trials"}
+    - {name: losartan, ref: "RAASi background, KDIGO LN 2021"}
+    - {name: lisinopril, ref: "RAASi background, KDIGO LN 2021"}
+  IgAN:
+    - {name: dexamethasone, ref: "glucocorticoid class, KDIGO IgAN 2021"}
+    - {name: prednisolone, ref: "STOP-IgAN / TESTING (JAMA 2017)"}
+    - {name: prednisone, ref: "KDIGO IgAN 2021"}
+    - {name: methylprednisolone, ref: "KDIGO IgAN 2021"}
+    - {name: mycophenolate-mofetil, ref: "IgAN MMF trials"}
+    - {name: azathioprine, ref: "IgAN immunosuppression trials"}
+    - {name: cyclophosphamide, ref: "IgAN crescentic trials"}
+    - {name: budesonide, ref: "NefIgArd (targeted-release, JASN 2023)"}
+    - {name: losartan, ref: "RAASi, KDIGO IgAN 2021"}
+    - {name: lisinopril, ref: "RAASi, KDIGO IgAN 2021"}
+    - {name: enalapril, ref: "RAASi, KDIGO IgAN 2021"}
+  FSGS:
+    - {name: dexamethasone, ref: "glucocorticoid backbone"}
+    - {name: prednisolone, ref: "FSGS steroid trials"}
+    - {name: prednisone, ref: "FSGS steroid trials"}
+    - {name: methylprednisolone, ref: "FSGS steroid trials"}
+    - {name: mycophenolate-mofetil, ref: "FSGS MMF trials"}
+    - {name: tacrolimus, ref: "FSGS CNI trials"}
+    - {name: cyclosporine, ref: "FSGS CNI trials"}
+    - {name: sirolimus, ref: "FSGS mTOR trials"}
+    - {name: losartan, ref: "RAASi background"}
+  AKI:
+    - {name: acetylcysteine, ref: "AKI prevention trials (mixed evidence, KDIGO AKI 2012)"}
+    - {name: dexmedetomidine, ref: "perioperative AKI prevention trials"}
+    - {name: atorvastatin, ref: "statin AKI trials"}
+    - {name: pentoxifylline, ref: "AKI inflammation trials"}
+    - {name: allopurinol, ref: "urate-lowering AKI trials"}
+    - {name: fenofibrate, ref: "PPARA agonist AKI models"}
+    - {name: pioglitazone, ref: "PPARg AKI models"}
+    - {name: melatonin, ref: "antioxidant AKI trials"}
+    - {name: resveratrol, ref: "preclinical AKI evidence"}

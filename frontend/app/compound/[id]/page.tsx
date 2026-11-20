@@ -66,7 +66,9 @@ export default function CompoundPage() {
         <div className="card">
           <h2>肾脏安全与机制</h2>
           <div className="kv">
-            <div>T-DIKI 概率</div><div>{Number(data.tdiki?.prob || 0).toFixed(3)}</div>
+            <div>T-DIKI v2 门控风险</div><div>{Number(data.tdiki?.prob || 0).toFixed(3)}</div>
+            <div>结构专家</div><div>{data.tdiki?.struct != null ? Number(data.tdiki.struct).toFixed(3) : "—"}</div>
+            <div>HA1E 肾上皮毒理</div><div>{data.tdiki?.tx != null ? Number(data.tdiki.tx).toFixed(3) : "无实测（仅结构）"}</div>
             <div>T-DIKI 分层</div><div>{data.tdiki?.tier}</div>
             <div>DIRIL 金标准</div><div>
               {data.tdiki?.diril_label === 1 ? <span className="badge red">肾毒阳性</span>

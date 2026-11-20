@@ -1,0 +1,780 @@
+{
+ "queries": [
+  {
+   "id": "q001",
+   "lang": "zh",
+   "text": "肾病反转查询：上调 COL1A1, COL3A1, FN1, TGFB1, SERPINE1；下调 NPHS1, NPHS2, PODXL, PPARA",
+   "expected_sop": "SOP-1",
+   "expected_slots": {
+    "up_genes": true,
+    "down_genes": true
+   }
+  },
+  {
+   "id": "q002",
+   "lang": "zh",
+   "text": "肾病反转查询：上调 COL1A1 COL1A2 COL3A1 FN1；下调 PPARA PPARGC1A CPT1A ACADM",
+   "expected_sop": "SOP-1",
+   "expected_slots": {
+    "up_genes": true,
+    "down_genes": true
+   }
+  },
+  {
+   "id": "q003",
+   "lang": "zh",
+   "text": "肾病反转查询：上调 HAVCR1, LCN2, SPP1, VCAM1；下调 WT1 NPHS1 NPHS2",
+   "expected_sop": "SOP-1",
+   "expected_slots": {
+    "up_genes": true,
+    "down_genes": true
+   }
+  },
+  {
+   "id": "q004",
+   "lang": "zh",
+   "text": "肾病反转查询：上调 MMP7 LYZ CXCL6 CASP1；下调 SLC22A8 CUBN LRP2",
+   "expected_sop": "SOP-1",
+   "expected_slots": {
+    "up_genes": true,
+    "down_genes": true
+   }
+  },
+  {
+   "id": "q005",
+   "lang": "zh",
+   "text": "肾病反转查询：上调 COL4A1 TGFB1 CCL2；下调 HNF4A ESRRA SLC5A2",
+   "expected_sop": "SOP-1",
+   "expected_slots": {
+    "up_genes": true,
+    "down_genes": true
+   }
+  },
+  {
+   "id": "q006",
+   "lang": "zh",
+   "text": "肾病反转查询：上调 COL1A1, COL3A1, FN1, TGFB1, SERPINE1；下调 NPHS1, NPHS2, PODXL, PPARA",
+   "expected_sop": "SOP-1",
+   "expected_slots": {
+    "up_genes": true,
+    "down_genes": true
+   }
+  },
+  {
+   "id": "q007",
+   "lang": "zh",
+   "text": "肾病反转查询：上调 COL1A1 COL1A2 COL3A1 FN1；下调 PPARA PPARGC1A CPT1A ACADM",
+   "expected_sop": "SOP-1",
+   "expected_slots": {
+    "up_genes": true,
+    "down_genes": true
+   }
+  },
+  {
+   "id": "q008",
+   "lang": "zh",
+   "text": "肾病反转查询：上调 HAVCR1, LCN2, SPP1, VCAM1；下调 WT1 NPHS1 NPHS2",
+   "expected_sop": "SOP-1",
+   "expected_slots": {
+    "up_genes": true,
+    "down_genes": true
+   }
+  },
+  {
+   "id": "q009",
+   "lang": "zh",
+   "text": "肾病反转查询：上调 MMP7 LYZ CXCL6 CASP1；下调 SLC22A8 CUBN LRP2",
+   "expected_sop": "SOP-1",
+   "expected_slots": {
+    "up_genes": true,
+    "down_genes": true
+   }
+  },
+  {
+   "id": "q010",
+   "lang": "zh",
+   "text": "肾病反转查询：上调 COL4A1 TGFB1 CCL2；下调 HNF4A ESRRA SLC5A2",
+   "expected_sop": "SOP-1",
+   "expected_slots": {
+    "up_genes": true,
+    "down_genes": true
+   }
+  },
+  {
+   "id": "q011",
+   "lang": "en",
+   "text": "Signature reversal: up HAVCR1  LCN2  SPP1  VCAM1; down PPARA PPARGC1A CPT1A ACADM",
+   "expected_sop": "SOP-1",
+   "expected_slots": {
+    "up_genes": true,
+    "down_genes": true
+   }
+  },
+  {
+   "id": "q012",
+   "lang": "en",
+   "text": "Signature reversal: up MMP7 LYZ CXCL6 CASP1; down WT1 NPHS1 NPHS2",
+   "expected_sop": "SOP-1",
+   "expected_slots": {
+    "up_genes": true,
+    "down_genes": true
+   }
+  },
+  {
+   "id": "q013",
+   "lang": "en",
+   "text": "Signature reversal: up COL4A1 TGFB1 CCL2; down SLC22A8 CUBN LRP2",
+   "expected_sop": "SOP-1",
+   "expected_slots": {
+    "up_genes": true,
+    "down_genes": true
+   }
+  },
+  {
+   "id": "q014",
+   "lang": "en",
+   "text": "Signature reversal: up COL1A1  COL3A1  FN1  TGFB1  SERPINE1; down HNF4A ESRRA SLC5A2",
+   "expected_sop": "SOP-1",
+   "expected_slots": {
+    "up_genes": true,
+    "down_genes": true
+   }
+  },
+  {
+   "id": "q015",
+   "lang": "en",
+   "text": "Signature reversal: up COL1A1 COL1A2 COL3A1 FN1; down NPHS1  NPHS2  PODXL  PPARA",
+   "expected_sop": "SOP-1",
+   "expected_slots": {
+    "up_genes": true,
+    "down_genes": true
+   }
+  },
+  {
+   "id": "q016",
+   "lang": "zh",
+   "text": "上调 COL1A1, COL3A1, FN1, TGFB1, SERPINE1，下调 WT1 NPHS1 NPHS2，只保留已批准药物",
+   "expected_sop": "SOP-1",
+   "expected_slots": {
+    "up_genes": true,
+    "down_genes": true
+   }
+  },
+  {
+   "id": "q017",
+   "lang": "zh",
+   "text": "上调 COL1A1 COL1A2 COL3A1 FN1，下调 SLC22A8 CUBN LRP2，仅看低肾毒候选",
+   "expected_sop": "SOP-1",
+   "expected_slots": {
+    "up_genes": true,
+    "down_genes": true
+   }
+  },
+  {
+   "id": "q018",
+   "lang": "zh",
+   "text": "上调 HAVCR1, LCN2, SPP1, VCAM1，下调 HNF4A ESRRA SLC5A2，按母核去重",
+   "expected_sop": "SOP-1",
+   "expected_slots": {
+    "up_genes": true,
+    "down_genes": true
+   }
+  },
+  {
+   "id": "q019",
+   "lang": "zh",
+   "text": "上调 MMP7 LYZ CXCL6 CASP1，下调 NPHS1, NPHS2, PODXL, PPARA，使用肾上皮上下文",
+   "expected_sop": "SOP-1",
+   "expected_slots": {
+    "up_genes": true,
+    "down_genes": true
+   }
+  },
+  {
+   "id": "q020",
+   "lang": "zh",
+   "text": "上调 COL4A1 TGFB1 CCL2，下调 PPARA PPARGC1A CPT1A ACADM，限制在小管区室表达",
+   "expected_sop": "SOP-1",
+   "expected_slots": {
+    "up_genes": true,
+    "down_genes": true
+   }
+  },
+  {
+   "id": "q021",
+   "lang": "zh",
+   "text": "查询 dexamethasone 的化合物画像与机制",
+   "expected_sop": "SOP-2",
+   "expected_slots": {
+    "compound": false
+   }
+  },
+  {
+   "id": "q022",
+   "lang": "zh",
+   "text": "查询 losartan 的化合物画像与机制",
+   "expected_sop": "SOP-2",
+   "expected_slots": {
+    "compound": false
+   }
+  },
+  {
+   "id": "q023",
+   "lang": "zh",
+   "text": "查询 metformin 的化合物画像与机制",
+   "expected_sop": "SOP-2",
+   "expected_slots": {
+    "compound": false
+   }
+  },
+  {
+   "id": "q024",
+   "lang": "zh",
+   "text": "查询 sirolimus 的化合物画像与机制",
+   "expected_sop": "SOP-2",
+   "expected_slots": {
+    "compound": false
+   }
+  },
+  {
+   "id": "q025",
+   "lang": "zh",
+   "text": "查询 mycophenolate-mofetil 的化合物画像与机制",
+   "expected_sop": "SOP-2",
+   "expected_slots": {
+    "compound": false
+   }
+  },
+  {
+   "id": "q026",
+   "lang": "zh",
+   "text": "查询 captopril 的化合物画像与机制",
+   "expected_sop": "SOP-2",
+   "expected_slots": {
+    "compound": false
+   }
+  },
+  {
+   "id": "q027",
+   "lang": "zh",
+   "text": "查询 tacrolimus 的化合物画像与机制",
+   "expected_sop": "SOP-2",
+   "expected_slots": {
+    "compound": false
+   }
+  },
+  {
+   "id": "q028",
+   "lang": "zh",
+   "text": "查询 dapagliflozin 的化合物画像与机制",
+   "expected_sop": "SOP-2",
+   "expected_slots": {
+    "compound": false
+   }
+  },
+  {
+   "id": "q029",
+   "lang": "en",
+   "text": "Show the profile and MoA of metformin",
+   "expected_sop": "SOP-2",
+   "expected_slots": {}
+  },
+  {
+   "id": "q030",
+   "lang": "en",
+   "text": "Show the profile and MoA of sirolimus",
+   "expected_sop": "SOP-2",
+   "expected_slots": {}
+  },
+  {
+   "id": "q031",
+   "lang": "en",
+   "text": "Show the profile and MoA of mycophenolate-mofetil",
+   "expected_sop": "SOP-2",
+   "expected_slots": {}
+  },
+  {
+   "id": "q032",
+   "lang": "en",
+   "text": "Show the profile and MoA of captopril",
+   "expected_sop": "SOP-2",
+   "expected_slots": {}
+  },
+  {
+   "id": "q033",
+   "lang": "zh",
+   "text": "mycophenolate-mofetil 的安全性如何，肾毒风险多少",
+   "expected_sop": "SOP-2",
+   "expected_slots": {}
+  },
+  {
+   "id": "q034",
+   "lang": "zh",
+   "text": "captopril 的安全性如何，肾毒风险多少",
+   "expected_sop": "SOP-2",
+   "expected_slots": {}
+  },
+  {
+   "id": "q035",
+   "lang": "zh",
+   "text": "tacrolimus 的安全性如何，肾毒风险多少",
+   "expected_sop": "SOP-2",
+   "expected_slots": {}
+  },
+  {
+   "id": "q036",
+   "lang": "zh",
+   "text": "寻找抑制 SMAD3 通路的化合物",
+   "expected_sop": "SOP-3",
+   "expected_slots": {}
+  },
+  {
+   "id": "q037",
+   "lang": "zh",
+   "text": "寻找抑制 TGFB 通路的化合物",
+   "expected_sop": "SOP-3",
+   "expected_slots": {}
+  },
+  {
+   "id": "q038",
+   "lang": "zh",
+   "text": "寻找抑制 NFKB 通路的化合物",
+   "expected_sop": "SOP-3",
+   "expected_slots": {}
+  },
+  {
+   "id": "q039",
+   "lang": "zh",
+   "text": "寻找抑制 STAT1 通路的化合物",
+   "expected_sop": "SOP-3",
+   "expected_slots": {}
+  },
+  {
+   "id": "q040",
+   "lang": "zh",
+   "text": "寻找激活 PPARA 通路的化合物",
+   "expected_sop": "SOP-3",
+   "expected_slots": {}
+  },
+  {
+   "id": "q041",
+   "lang": "zh",
+   "text": "寻找抑制 SMAD3 通路的化合物",
+   "expected_sop": "SOP-3",
+   "expected_slots": {}
+  },
+  {
+   "id": "q042",
+   "lang": "zh",
+   "text": "寻找抑制 TGFB 通路的化合物",
+   "expected_sop": "SOP-3",
+   "expected_slots": {}
+  },
+  {
+   "id": "q043",
+   "lang": "zh",
+   "text": "寻找抑制 NFKB 通路的化合物",
+   "expected_sop": "SOP-3",
+   "expected_slots": {}
+  },
+  {
+   "id": "q044",
+   "lang": "en",
+   "text": "Compounds that inhibit TGFB signaling",
+   "expected_sop": "SOP-3",
+   "expected_slots": {}
+  },
+  {
+   "id": "q045",
+   "lang": "en",
+   "text": "Compounds that inhibit NFKB signaling",
+   "expected_sop": "SOP-3",
+   "expected_slots": {}
+  },
+  {
+   "id": "q046",
+   "lang": "en",
+   "text": "Compounds that inhibit STAT1 signaling",
+   "expected_sop": "SOP-3",
+   "expected_slots": {}
+  },
+  {
+   "id": "q047",
+   "lang": "en",
+   "text": "Compounds that activate PPARA signaling",
+   "expected_sop": "SOP-3",
+   "expected_slots": {}
+  },
+  {
+   "id": "q048",
+   "lang": "zh",
+   "text": "同时抑制 SMAD3 且抑制 NFKB 的药物有哪些",
+   "expected_sop": "SOP-3",
+   "expected_slots": {}
+  },
+  {
+   "id": "q049",
+   "lang": "zh",
+   "text": "同时抑制 TGFB 且抑制 STAT1 的药物有哪些",
+   "expected_sop": "SOP-3",
+   "expected_slots": {}
+  },
+  {
+   "id": "q050",
+   "lang": "zh",
+   "text": "同时抑制 NFKB 且激活 PPARA 的药物有哪些",
+   "expected_sop": "SOP-3",
+   "expected_slots": {}
+  },
+  {
+   "id": "q051",
+   "lang": "zh",
+   "text": "查询靶点 TGFBR1 的遗传扰动模拟与表达",
+   "expected_sop": "SOP-4",
+   "expected_slots": {}
+  },
+  {
+   "id": "q052",
+   "lang": "zh",
+   "text": "查询靶点 APOL1 的遗传扰动模拟与表达",
+   "expected_sop": "SOP-4",
+   "expected_slots": {}
+  },
+  {
+   "id": "q053",
+   "lang": "zh",
+   "text": "查询靶点 PPARG 的遗传扰动模拟与表达",
+   "expected_sop": "SOP-4",
+   "expected_slots": {}
+  },
+  {
+   "id": "q054",
+   "lang": "zh",
+   "text": "查询靶点 NR3C1 的遗传扰动模拟与表达",
+   "expected_sop": "SOP-4",
+   "expected_slots": {}
+  },
+  {
+   "id": "q055",
+   "lang": "zh",
+   "text": "查询靶点 CASP1 的遗传扰动模拟与表达",
+   "expected_sop": "SOP-4",
+   "expected_slots": {}
+  },
+  {
+   "id": "q056",
+   "lang": "zh",
+   "text": "查询靶点 TGFBR1 的遗传扰动模拟与表达",
+   "expected_sop": "SOP-4",
+   "expected_slots": {}
+  },
+  {
+   "id": "q057",
+   "lang": "zh",
+   "text": "查询靶点 APOL1 的遗传扰动模拟与表达",
+   "expected_sop": "SOP-4",
+   "expected_slots": {}
+  },
+  {
+   "id": "q058",
+   "lang": "zh",
+   "text": "查询靶点 PPARG 的遗传扰动模拟与表达",
+   "expected_sop": "SOP-4",
+   "expected_slots": {}
+  },
+  {
+   "id": "q059",
+   "lang": "en",
+   "text": "Target APOL1 knockout mimicry compounds",
+   "expected_sop": "SOP-4",
+   "expected_slots": {}
+  },
+  {
+   "id": "q060",
+   "lang": "en",
+   "text": "Target PPARG knockout mimicry compounds",
+   "expected_sop": "SOP-4",
+   "expected_slots": {}
+  },
+  {
+   "id": "q061",
+   "lang": "en",
+   "text": "Target NR3C1 knockout mimicry compounds",
+   "expected_sop": "SOP-4",
+   "expected_slots": {}
+  },
+  {
+   "id": "q062",
+   "lang": "en",
+   "text": "Target CASP1 knockout mimicry compounds",
+   "expected_sop": "SOP-4",
+   "expected_slots": {}
+  },
+  {
+   "id": "q063",
+   "lang": "zh",
+   "text": "PPARG 敲除后哪些化合物最相似",
+   "expected_sop": "SOP-4",
+   "expected_slots": {}
+  },
+  {
+   "id": "q064",
+   "lang": "zh",
+   "text": "NR3C1 敲除后哪些化合物最相似",
+   "expected_sop": "SOP-4",
+   "expected_slots": {}
+  },
+  {
+   "id": "q065",
+   "lang": "zh",
+   "text": "CASP1 敲除后哪些化合物最相似",
+   "expected_sop": "SOP-4",
+   "expected_slots": {}
+  },
+  {
+   "id": "q066",
+   "lang": "zh",
+   "text": "SMILES CC(=O)OC1=CC=CC=C1C(=O)O 的结构相似药物与机制推断",
+   "expected_sop": "SOP-5",
+   "expected_slots": {}
+  },
+  {
+   "id": "q067",
+   "lang": "zh",
+   "text": "SMILES CC(C)Cc1ccc(cc1)C(C)C(=O)O 的结构相似药物与机制推断",
+   "expected_sop": "SOP-5",
+   "expected_slots": {}
+  },
+  {
+   "id": "q068",
+   "lang": "zh",
+   "text": "SMILES CN1C=NC2=C1C(=O)N(C(=O)N2C)C 的结构相似药物与机制推断",
+   "expected_sop": "SOP-5",
+   "expected_slots": {}
+  },
+  {
+   "id": "q069",
+   "lang": "zh",
+   "text": "SMILES CC1=C(C(=O)N(N1)C2=CC=CC=C2)C 的结构相似药物与机制推断",
+   "expected_sop": "SOP-5",
+   "expected_slots": {}
+  },
+  {
+   "id": "q070",
+   "lang": "zh",
+   "text": "SMILES O=C(O)c1ccccc1O 的结构相似药物与机制推断",
+   "expected_sop": "SOP-5",
+   "expected_slots": {}
+  },
+  {
+   "id": "q071",
+   "lang": "zh",
+   "text": "SMILES CC(=O)OC1=CC=CC=C1C(=O)O 的结构相似药物与机制推断",
+   "expected_sop": "SOP-5",
+   "expected_slots": {}
+  },
+  {
+   "id": "q072",
+   "lang": "zh",
+   "text": "SMILES CC(C)Cc1ccc(cc1)C(C)C(=O)O 的结构相似药物与机制推断",
+   "expected_sop": "SOP-5",
+   "expected_slots": {}
+  },
+  {
+   "id": "q073",
+   "lang": "zh",
+   "text": "SMILES CN1C=NC2=C1C(=O)N(C(=O)N2C)C 的结构相似药物与机制推断",
+   "expected_sop": "SOP-5",
+   "expected_slots": {}
+  },
+  {
+   "id": "q074",
+   "lang": "en",
+   "text": "Find structural neighbours and infer MoA for SMILES CN1C=NC2=C1C(=O)N(C(=O)N2C)C",
+   "expected_sop": "SOP-5",
+   "expected_slots": {}
+  },
+  {
+   "id": "q075",
+   "lang": "en",
+   "text": "Find structural neighbours and infer MoA for SMILES CC1=C(C(=O)N(N1)C2=CC=CC=C2)C",
+   "expected_sop": "SOP-5",
+   "expected_slots": {}
+  },
+  {
+   "id": "q076",
+   "lang": "en",
+   "text": "Find structural neighbours and infer MoA for SMILES O=C(O)c1ccccc1O",
+   "expected_sop": "SOP-5",
+   "expected_slots": {}
+  },
+  {
+   "id": "q077",
+   "lang": "en",
+   "text": "Find structural neighbours and infer MoA for SMILES CC(=O)OC1=CC=CC=C1C(=O)O",
+   "expected_sop": "SOP-5",
+   "expected_slots": {}
+  },
+  {
+   "id": "q078",
+   "lang": "zh",
+   "text": "BRD-K11433652 的结构相似化合物",
+   "expected_sop": "SOP-5",
+   "expected_slots": {}
+  },
+  {
+   "id": "q079",
+   "lang": "zh",
+   "text": "BRD-K11433652 的结构相似化合物",
+   "expected_sop": "SOP-5",
+   "expected_slots": {}
+  },
+  {
+   "id": "q080",
+   "lang": "zh",
+   "text": "BRD-K11433652 的结构相似化合物",
+   "expected_sop": "SOP-5",
+   "expected_slots": {}
+  },
+  {
+   "id": "q081",
+   "lang": "zh",
+   "text": "加载肾病队列案例 DKD 并给出反转候选",
+   "expected_sop": "SOP-6",
+   "expected_slots": {}
+  },
+  {
+   "id": "q082",
+   "lang": "zh",
+   "text": "加载肾病队列案例 LN 并给出反转候选",
+   "expected_sop": "SOP-6",
+   "expected_slots": {}
+  },
+  {
+   "id": "q083",
+   "lang": "zh",
+   "text": "加载肾病队列案例 CKD 并给出反转候选",
+   "expected_sop": "SOP-6",
+   "expected_slots": {}
+  },
+  {
+   "id": "q084",
+   "lang": "zh",
+   "text": "加载肾病队列案例 AKI 并给出反转候选",
+   "expected_sop": "SOP-6",
+   "expected_slots": {}
+  },
+  {
+   "id": "q085",
+   "lang": "zh",
+   "text": "加载肾病队列案例 LN 并给出反转候选",
+   "expected_sop": "SOP-6",
+   "expected_slots": {}
+  },
+  {
+   "id": "q086",
+   "lang": "en",
+   "text": "Run the built-in DKD renal cohort case",
+   "expected_sop": "SOP-6",
+   "expected_slots": {}
+  },
+  {
+   "id": "q087",
+   "lang": "en",
+   "text": "Run the built-in LN renal cohort case",
+   "expected_sop": "SOP-6",
+   "expected_slots": {}
+  },
+  {
+   "id": "q088",
+   "lang": "en",
+   "text": "Run the built-in CKD renal cohort case",
+   "expected_sop": "SOP-6",
+   "expected_slots": {}
+  },
+  {
+   "id": "q089",
+   "lang": "en",
+   "text": "Run the built-in AKI renal cohort case",
+   "expected_sop": "SOP-6",
+   "expected_slots": {}
+  },
+  {
+   "id": "q090",
+   "lang": "en",
+   "text": "Run the built-in LN renal cohort case",
+   "expected_sop": "SOP-6",
+   "expected_slots": {}
+  },
+  {
+   "id": "q091",
+   "lang": "zh",
+   "text": "今天北京天气怎么样",
+   "expected_sop": "OUT_OF_SCOPE",
+   "expected_slots": {}
+  },
+  {
+   "id": "q092",
+   "lang": "zh",
+   "text": "写一首关于春天的诗",
+   "expected_sop": "OUT_OF_SCOPE",
+   "expected_slots": {}
+  },
+  {
+   "id": "q093",
+   "lang": "en",
+   "text": "What is the capital of France?",
+   "expected_sop": "OUT_OF_SCOPE",
+   "expected_slots": {}
+  },
+  {
+   "id": "q094",
+   "lang": "zh",
+   "text": "帮我订一张去上海的机票",
+   "expected_sop": "OUT_OF_SCOPE",
+   "expected_slots": {}
+  },
+  {
+   "id": "q095",
+   "lang": "en",
+   "text": "Explain quantum entanglement in simple terms",
+   "expected_sop": "OUT_OF_SCOPE",
+   "expected_slots": {}
+  },
+  {
+   "id": "q096",
+   "lang": "zh",
+   "text": "请给出上调基因列表",
+   "expected_sop": "SOP-1",
+   "expected_slots": {}
+  },
+  {
+   "id": "q097",
+   "lang": "zh",
+   "text": "帮我查一下这个药",
+   "expected_sop": "SOP-2",
+   "expected_slots": {}
+  },
+  {
+   "id": "q098",
+   "lang": "en",
+   "text": "Find compounds for this signature",
+   "expected_sop": "SOP-1",
+   "expected_slots": {}
+  },
+  {
+   "id": "q099",
+   "lang": "zh",
+   "text": "查询靶点",
+   "expected_sop": "SOP-4",
+   "expected_slots": {}
+  },
+  {
+   "id": "q100",
+   "lang": "en",
+   "text": "Suggest something for kidney disease",
+   "expected_sop": "SOP-1",
+   "expected_slots": {}
+  }
+ ]
+}

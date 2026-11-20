@@ -1,0 +1,187 @@
+# BM-2 cohort registry (Stage 2, pre-registered 2026-11-20).
+#
+# QC rules are fixed BEFORE evaluation and applied to every cohort added after
+# the original six:
+#   1) disease group and control group each with n >= 5 samples
+#   2) >= 8000 genes successfully mapped into the 12,328-gene L1000 universe
+#   3) biological positive-control check: LN cohorts must show IFN-I top
+#      up-regulation; DKD/fibrosis cohorts must show ECM/TGFb up-regulation or
+#      tubular metabolic down-regulation (recorded in the ETL log, not tuned).
+# Cohorts from the same study carry the same study_id for study-level
+# deduplicated sensitivity tests.
+#
+# data_format: series_matrix (default) | rnaseq_processed_csv | rnaseq_tar_txt
+# The ETL (scripts/etl/bm2_cohort_deg.py) reads this file as its source of
+# truth; group rules are regexes matched against joined sample metadata tags.
+
+qc:
+  min_group_n: 5
+  min_mapped_genes: 8000
+  require_positive_control: true
+
+cohorts:
+  # ---- original six (grandfathered group sizes, still QC-checked) ----
+  DKD_glom:
+    gse: GSE30528
+    study_id: GSE30528
+    disease: DKD
+    compartment: glomerulus
+    disease_re: "diabetic kidney disease"
+    control_re: "control"
+    note: "DKD glomeruli vs control glomeruli (Human U133A 2.0)"
+  DKD_tub:
+    gse: GSE30529
+    study_id: GSE30529
+    disease: DKD
+    compartment: tubulointerstitium
+    disease_re: "diabetic kidney disease"
+    control_re: "control"
+    note: "DKD tubuli vs control tubuli"
+  LN_glom:
+    gse: GSE32591
+    study_id: GSE32591
+    disease: LN
+    compartment: glomerulus
+    disease_re: "LN patient"
+    control_re: "control"
+    any_re: "Glomeruli"
+    note: "LN glomeruli vs control glomeruli (HuGene ST)"
+  LN_tub:
+    gse: GSE32591
+    study_id: GSE32591
+    disease: LN
+    compartment: tubulointerstitium
+    disease_re: "LN patient"
+    control_re: "control"
+    any_re: "Tubulointerstitium"
+    note: "LN tubulointerstitium vs control"
+  CKD:
+    gse: GSE66494
+    study_id: GSE66494
+    disease: CKD
+    compartment: whole_kidney
+    disease_re: "chronic kidney disease"
+    control_re: "normal kidney"
+    note: "CKD biopsies vs normal kidney RNA (Agilent)"
+  LN2:
+    gse: GSE112943
+    study_id: GSE112943
+    disease: LN
+    compartment: whole_kidney
+    disease_re: "lupus nephritis"
+    control_re: "Kidney Control"
+    note: "LN kidney vs normal kidney (HT-12 V4)"
+  AKI:
+    gse: GSE30718
+    study_id: GSE30718
+    disease: AKI
+    compartment: whole_kidney
+    disease_re: "Acute kidney injury"
+    control_re: "pristine protocol biopsy"
+    note: "transplant-AKI vs pristine protocol biopsies"
+
+  # ---- Stage 2 additions: ERCB (European Renal cDNA Bank) ----
+  ERCB_DKD_glom:
+    gse: GSE104948
+    matrix_file: GPL22945.txt.gz
+    platform: GPL22945
+    study_id: ERCB
+    disease: DKD
+    compartment: glomerulus
+    disease_re: "Diabetic Nephropathy"
+    control_re: "LD[0-9_]"
+    note: "ERCB glomeruli: DKD vs living donor"
+  ERCB_FSGS_glom:
+    gse: GSE104948
+    matrix_file: GPL22945.txt.gz
+    platform: GPL22945
+    study_id: ERCB
+    disease: FSGS
+    compartment: glomerulus
+    disease_re: "focal segmental .*sclerosis$"
+    control_re: "LD[0-9_]"
+    note: "ERCB glomeruli: FSGS vs living donor (Tier-A drugs only)"
+  ERCB_IgAN_glom:
+    gse: GSE104948
+    matrix_file: GPL24120.txt.gz
+    platform: GPL24120
+    study_id: ERCB
+    disease: IgAN
+    compartment: glomerulus
+    disease_re: "IgA Nephropathy"
+    control_re: "LD_|Tumor Nephrectomy"
+    note: "ERCB glomeruli: IgAN vs living donor/tumor nephrectomy"
+  ERCB_LN_glom:
+    gse: GSE104948
+    matrix_file: GPL24120.txt.gz
+    platform: GPL24120
+    study_id: ERCB
+    disease: LN
+    compartment: glomerulus
+    disease_re: "Systemic Lupus Erythematosus"
+    control_re: "LD_|Tumor Nephrectomy"
+    note: "ERCB glomeruli: LN (SLE) vs living donor/tumor nephrectomy"
+
+  # ---- Stage 2 additions: ERCB tubulointerstitium ----
+  ERCB_DKD_tub:
+    gse: GSE104954
+    matrix_file: GPL22945.txt.gz
+    platform: GPL22945
+    study_id: ERCB
+    disease: DKD
+    compartment: tubulointerstitium
+    disease_re: "Diabetic Nephropathy"
+    control_re: "LD[0-9_]"
+    note: "ERCB tubulointerstitium: DKD vs living donor"
+  ERCB_FSGS_tub:
+    gse: GSE104954
+    matrix_file: GPL22945.txt.gz
+    platform: GPL22945
+    study_id: ERCB
+    disease: FSGS
+    compartment: tubulointerstitium
+    disease_re: "focal segmental .*sclerosis$"
+    control_re: "LD[0-9_]"
+    note: "ERCB tubulointerstitium: FSGS vs living donor (Tier-A drugs only)"
+  ERCB_IgAN_tub:
+    gse: GSE104954
+    matrix_file: GPL24120.txt.gz
+    platform: GPL24120
+    study_id: ERCB
+    disease: IgAN
+    compartment: tubulointerstitium
+    disease_re: "IgA Nephropathy"
+    control_re: "LD_|Tumor Nephrectomy"
+    note: "ERCB tubulointerstitium: IgAN vs living donor/tumor nephrectomy"
+
+  # ---- Stage 2 additions: RNA-seq ----
+  DKD_RNAseq:
+    gse: GSE142025
+    data_format: rnaseq_tar_txt
+    platform: GPL20301
+    study_id: GSE142025
+    disease: DKD
+    compartment: whole_kidney
+    disease_re: "Advanced_DN|Early_DN"
+    control_re: "Control|Normal"
+    note: "DKD (early+advanced) vs normal kidney, RNA-seq"
+  AKI_RNAseq:
+    gse: GSE139061
+    data_format: rnaseq_processed_csv
+    platform: GPL20301
+    study_id: GSE139061
+    disease: AKI
+    compartment: whole_kidney
+    disease_re: "AKI"
+    control_re: "REF|control|normal|reference"
+    note: "native kidney biopsy AKI vs reference kidney, RNA-seq"
+  IgAN_tub_RNAseq:
+    gse: GSE175759
+    data_format: rnaseq_tar_txt
+    platform: GPL16791
+    study_id: GSE175759
+    disease: IgAN
+    compartment: tubulointerstitium
+    disease_re: "IgAN"
+    control_re: "Control|Normal"
+    note: "IgAN tubulointerstitium vs control, RNA-seq"

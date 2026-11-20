@@ -42,11 +42,17 @@ def gctx_ids(path):
 
 
 def load_sig_table(cfg=None):
-    """All non-control signatures joined across phases with matrix column index."""
+    """All non-control signatures joined across phases with matrix column index.
+
+    Keeps pert_idose / pert_itime (empty string when the phase lacks them) so
+    dose/time can inform consensus weighting and filtering.
+    """
     cfg = cfg or load_settings()
     lv = Path(cfg["paths"]["level5"])
     frames = []
     col_ids = {}
+    keep = ["sig_id", "pert_id", "pert_iname", "pert_type", "cell_id",
+            "phase", "col_idx", "pert_idose", "pert_itime"]
     for phase, spec in cfg["phases"].items():
         cols, _ = gctx_ids(lv / spec["matrix"])
         col_ids[phase] = {sid: i for i, sid in enumerate(cols)}
@@ -58,8 +64,11 @@ def load_sig_table(cfg=None):
             print(f"[warn] {phase}: {int(missing.sum())} sig_info rows absent from gctx")
         meta = meta[~missing].copy()
         meta["col_idx"] = meta["col_idx"].astype(np.int64)
-        frames.append(meta[["sig_id", "pert_id", "pert_iname", "pert_type",
-                            "cell_id", "phase", "col_idx"]])
+        for col in ("pert_idose", "pert_itime"):
+            if col not in meta.columns:
+                meta[col] = ""
+            meta[col] = meta[col].fillna("")
+        frames.append(meta[keep])
     sigs = pd.concat(frames, ignore_index=True)
     sigs = sigs[~sigs["pert_type"].str.startswith(CTL_PREFIX)].reset_index(drop=True)
     return sigs
