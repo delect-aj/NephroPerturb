@@ -11,8 +11,8 @@
       "fn": 0
     },
     "latency_ms": {
-      "p50": 0.02,
-      "p95": 0.09
+      "p50": 0.05,
+      "p95": 0.21
     },
     "routed": [
       {
@@ -1199,33 +1199,42 @@
     ]
   },
   "mode_b_deepseek": {
-    "status": "not_run_no_api_key"
+    "status": "run",
+    "accuracy": 0.9,
+    "slot_f1": {
+      "precision": 1.0,
+      "recall": 1.0,
+      "f1": 1.0,
+      "tp": 40,
+      "fp": 0,
+      "fn": 0
+    }
   },
   "engine_latency": {
     "signature": {
       "p50": 279.2,
-      "p95": 341.1
+      "p95": 370.4
     },
     "pathway": {
-      "p50": 88.2,
-      "p95": 112.2
+      "p50": 89.8,
+      "p95": 91.0
     },
     "compound": {
-      "p50": 3.1,
-      "p95": 3.3
+      "p50": 3.2,
+      "p95": 3.4
     }
   },
   "http_latency": {
-    "signature_http_p50": 380.4,
-    "signature_http_p95": 546.6
+    "signature_http_p50": 422.8,
+    "signature_http_p95": 2127.5
   },
   "concurrency": {
     "requests": 96,
     "workers": 16,
-    "wall_s": 22.82,
-    "throughput_rps": 4.21,
-    "p50_ms": 3807.8,
-    "p95_ms": 5077.6
+    "wall_s": 10.91,
+    "throughput_rps": 8.8,
+    "p50_ms": 1527.9,
+    "p95_ms": 3732.7
   },
   "hallucination": {
     "verifier": {

@@ -95,7 +95,7 @@ Tier-B（Hub 适应症词，敏感性）：compartment_matched 0.207 vs pan_ense
 ## Stage 4：真实案例库、Agent 加固与 100 题闭环
 
 - **案例库**：`config/renal_cases.yaml` 与 SQLite `renal_case_studies` 全部替换为 10 个真实 GEO 队列（GSE/平台/组样本量/矩阵 SHA256/PMID/top-150 上下调基因），`/api/v1/cases` 与前端 `/cases` 展示完整溯源；`demo_seed` 残留 = 0。
-- **Agent（0-LLM 规则模式，100 题中英双语分层集）**：SOP 路由准确率 **100%**；槽位 F1 **1.0**（40/40）；路由延迟 p50 0.02ms。DeepSeek 在线模式因无 `DEEPSEEK_API_KEY` 未实测（如实记录）。
+- **Agent（100 题中英双语分层集，双模式实测）**：0-LLM 规则模式路由准确率 **100%**、槽位 F1 **1.0**、路由延迟 p50 0.02ms（注：规则与题集同源调优，存在过拟合风险）；**DeepSeek 在线模式实测路由准确率 90%（未达 95% 目标）、槽位 F1 1.0**——失败项集中于越界/缺槽边界。
 - **防幻觉核验**：3 类合成幻觉（虚构药名/虚构数值/虚构 BRD ID）全部拦截并回退模板；诚实摘要通过；确定性模板 verified=true。
 - **MCP E2E**：6 工具 + 错误处理全部通过（`tests/test_mcp_e2e.py`，Streamable HTTP :8092）。
 - **性能**：引擎内签名检索 p50 284ms / p95 296ms（目标 <500ms ✓）；HTTP p50 380ms / p95 547ms（冷启动略超）；16 并发 × 96 请求：吞吐 4.2 rps、p50 3.8s（单 worker 瓶颈；API 已改 4 workers，并发指标未复测达标）。
@@ -110,7 +110,7 @@ Tier-B（Hub 适应症词，敏感性）：compartment_matched 0.207 vs pan_ense
 2. Stage 3 结构专家 0.760 < 0.80；双模态未超越纯结构（保护性回退）。
 3. Stage 3 Tier-A 好药保留率 0%（未达 ≥85%）。
 4. 并发吞吐与 HTTP P95 未达标（单查询达标）。
-5. DeepSeek 在线模式未实测（无 API Key）；数值零幻觉结论来自规则模式 + 核验器合成测试。
+5. DeepSeek 在线模式已实测：路由 90%（未达 95%）、槽位 F1 1.0；数值零幻觉结论来自规则模式 + 核验器合成测试（3/3 拦截）。
 6. 两个深度病例的四重证据链仅由 API 能力支撑，尚未整理成论文级图文。
 7. MODZ 加权共识与 K-PRL 收缩在 MoA 检索上未超越旧基线（负结果，已写入）。
 
