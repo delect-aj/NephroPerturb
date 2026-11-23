@@ -9,14 +9,6 @@ export interface AgentExample {
 
 export const AGENT_EXAMPLES: AgentExample[] = [
   {
-    id: "dkd-cohort",
-    title: "DKD Glomerular Cohort",
-    subtitle: "GSE30528 reversal + NephroSafe flags",
-    sop: "SOP-6",
-    color: "#2563eb",
-    prompt: "Find reversal drugs for the DKD glomeruli case",
-  },
-  {
     id: "fibrosis-safe",
     title: "Fibrosis Signature (Safe)",
     subtitle: "Approved drugs · Low T-DIKI filter",
@@ -24,22 +16,6 @@ export const AGENT_EXAMPLES: AgentExample[] = [
     color: "#14b8a6",
     prompt:
       "Up: COL1A1 COL3A1 FN1 TGFB1 SERPINE1 LCN2 HAVCR1; Down: NPHS1 NPHS2 PODXL PPARA PPARGC1A CPT1A. Approved drugs only, low nephrotoxicity risk",
-  },
-  {
-    id: "pathway-smad-ppara",
-    title: "SMAD3/TGFb − · PPARA +",
-    subtitle: "Multi-target pathway & TF screen",
-    sop: "SOP-3",
-    color: "#7c3aed",
-    prompt: "Inhibit SMAD3 and TGFb, activate PPARA",
-  },
-  {
-    id: "ln-cohort",
-    title: "LN Glomerular Cohort",
-    subtitle: "Immune/epithelial context routing",
-    sop: "SOP-6",
-    color: "#0284c7",
-    prompt: "Run the LN glomeruli case",
   },
   {
     id: "dex-profile",
@@ -58,6 +34,14 @@ export const AGENT_EXAMPLES: AgentExample[] = [
     prompt: "Is tacrolimus nephrotoxic? Show its kidney safety profile",
   },
   {
+    id: "pathway-smad-ppara",
+    title: "SMAD3/TGFb − · PPARA +",
+    subtitle: "Multi-target pathway & TF screen",
+    sop: "SOP-3",
+    color: "#7c3aed",
+    prompt: "Inhibit SMAD3 and TGFb, activate PPARA",
+  },
+  {
     id: "tgfbr1-mimicry",
     title: "TGFBR1 Knockdown Mimic",
     subtitle: "Compounds matching shRNA/CRISPR",
@@ -72,6 +56,22 @@ export const AGENT_EXAMPLES: AgentExample[] = [
     sop: "SOP-5",
     color: "#4f46e5",
     prompt: "Find compounds structurally similar to CC(=O)OC1=CC=CC=C1C(=O)O",
+  },
+  {
+    id: "dkd-cohort",
+    title: "DKD Glomerular Cohort",
+    subtitle: "GSE30528 reversal + NephroSafe flags",
+    sop: "SOP-6",
+    color: "#2563eb",
+    prompt: "Find reversal drugs for the DKD glomeruli case",
+  },
+  {
+    id: "ln-cohort",
+    title: "LN Glomerular Cohort",
+    subtitle: "Immune/epithelial context routing",
+    sop: "SOP-6",
+    color: "#0284c7",
+    prompt: "Run the LN glomeruli case",
   },
 ];
 
