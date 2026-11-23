@@ -56,8 +56,13 @@ function buildDossierMarkdown(turn: AgentTurn): string {
     lines.push(`## Kidney Literature Evidence`);
     turn.literature.forEach((grp) => {
       lines.push(`### ${grp.entity} — ${grp.evidence_tier} (${grp.provider})`);
+      if (grp.synthesis?.verdict) {
+        lines.push(`- **Synthesis**: ${grp.synthesis.verdict} ${grp.synthesis.novelty_note || ""}`);
+      }
       (grp.papers || []).forEach((p: any) => {
+        const kf = p.takeaway || p.snippet;
         lines.push(`- [${p.category}] **${p.title}** (${p.journal}, ${p.year}) — ${p.pmid ? `PMID:${p.pmid} (${p.url})` : p.url}`);
+        if (kf) lines.push(`  - Key finding: ${kf}`);
       });
       lines.push("");
     });
@@ -457,105 +462,165 @@ export default function AgentResult({
       {/* Tab Panel: Literature Cards */}
       {tab === "literature" && hasLit && (
         <div style={{ marginTop: 8, display: "flex", flexDirection: "column", gap: 10 }}>
-          {lits.map((grp: any, gIdx: number) => (
-            <div key={`${grp.entity}-${gIdx}`} className="lit-group">
-              <div className="row" style={{ marginBottom: 6 }}>
-                <strong>{grp.entity}</strong>
-                <EvidenceTierBadge tier={grp.evidence_tier} />
-                <span className="small muted">
-                  Efficacy hits: {grp.efficacy_total_hits ?? 0} · Safety hits: {grp.safety_total_hits ?? 0}
-                </span>
-                <span className="spacer" />
-                <span className="badge grey mono">{grp.provider}{grp.cached ? " · cached" : ""}</span>
-              </div>
-              {grp.error && <div className="small" style={{ color: "var(--warn)" }}>{grp.error}</div>}
-              {(!grp.papers || grp.papers.length === 0) ? (
-                <div className="small muted">
-                  No kidney papers indexed for this query ({grp.evidence_tier}). Candidate represents a high-novelty repurposing hypothesis.
+          {lits.map((grp: any, gIdx: number) => {
+            const synth = grp.synthesis;
+            return (
+              <div key={`${grp.entity}-${gIdx}`} className="lit-group">
+                <div className="row" style={{ marginBottom: 6 }}>
+                  <strong>{grp.entity}</strong>
+                  <EvidenceTierBadge tier={grp.evidence_tier} />
+                  <span className="small muted">
+                    Efficacy hits: {grp.efficacy_total_hits ?? 0} · Safety hits: {grp.safety_total_hits ?? 0}
+                  </span>
+                  <span className="spacer" />
+                  <span className="badge grey mono">{grp.provider}{grp.cached ? " · cached" : ""}</span>
                 </div>
-              ) : (
-                <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
-                  {grp.papers.map((p: any, pIdx: number) => (
-                    <div key={`${p.pmid || pIdx}-${pIdx}`} className="lit-card">
-                      <div className="row" style={{ gap: 6 }}>
-                        <span className={`badge ${p.category === "Safety Warning" ? "red" : p.category === "Clinical" ? "green" : p.category === "Preclinical" ? "blue" : "grey"}`}>
-                          {p.category}
-                        </span>
-                        <span className="small muted">
-                          {p.journal} ({p.year || "—"})
-                        </span>
-                        {p.cited_by != null && (
-                          <span className="small muted">· Cited {p.cited_by}</span>
-                        )}
-                        <span className="spacer" />
-                        {p.pmid && (
-                          <a
-                            href={p.url}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="cite-chip cite-pmid"
-                          >
-                            PMID:{p.pmid}
-                          </a>
+
+                {synth && (
+                  <div className="lit-synth-box">
+                    <div className="lit-synth-title">
+                      Evidence Synthesis · {synth.novelty_note}
+                    </div>
+                    {synth.efficacy_points?.length > 0 && (
+                      <div style={{ display: "flex", flexDirection: "column", gap: 3, marginTop: 4 }}>
+                        {synth.efficacy_points.map((pt: any, ptIdx: number) => (
+                          <div key={`ep-${ptIdx}`} className="small">
+                            <span className="badge blue" style={{ marginRight: 5 }}>{pt.category}</span>
+                            {pt.finding}
+                            {pt.pmid && (
+                              <a
+                                href={`https://pubmed.ncbi.nlm.nih.gov/${pt.pmid}/`}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="cite-chip cite-pmid"
+                              >
+                                PMID:{pt.pmid}
+                              </a>
+                            )}
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                    {synth.safety_points?.length > 0 && (
+                      <div className="lit-safety-box">
+                        <strong style={{ color: "var(--bad)" }}>Nephrotoxicity Signals:</strong>{" "}
+                        {synth.safety_points.map((sp: any, sIdx: number) => (
+                          <span key={`sp-${sIdx}`}>
+                            {sIdx > 0 ? " | " : ""}
+                            {sp.finding}
+                            {sp.pmid && (
+                              <a
+                                href={`https://pubmed.ncbi.nlm.nih.gov/${sp.pmid}/`}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="cite-chip cite-pmid"
+                              >
+                                PMID:{sp.pmid}
+                              </a>
+                            )}
+                          </span>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                {grp.error && <div className="small" style={{ color: "var(--warn)" }}>{grp.error}</div>}
+                {(!grp.papers || grp.papers.length === 0) ? (
+                  <div className="small muted">
+                    No kidney papers indexed for this query ({grp.evidence_tier}). Candidate represents a high-novelty repurposing hypothesis.
+                  </div>
+                ) : (
+                  <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+                    {grp.papers.map((p: any, pIdx: number) => (
+                      <div key={`${p.pmid || pIdx}-${pIdx}`} className="lit-card">
+                        <div className="row" style={{ gap: 6 }}>
+                          <span className={`badge ${p.category === "Safety Warning" ? "red" : p.category === "Clinical" ? "green" : p.category === "Preclinical" ? "blue" : "grey"}`}>
+                            {p.category}
+                          </span>
+                          <span className="small muted">
+                            {p.journal} ({p.year || "—"})
+                          </span>
+                          {p.cited_by != null && (
+                            <span className="small muted">· Cited {p.cited_by}</span>
+                          )}
+                          <span className="spacer" />
+                          {p.pmid && (
+                            <a
+                              href={p.url}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="cite-chip cite-pmid"
+                            >
+                              PMID:{p.pmid}
+                            </a>
+                          )}
+                        </div>
+                        <a
+                          href={p.url}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          style={{ fontWeight: 600, fontSize: 12.6, display: "block", marginTop: 3 }}
+                        >
+                          {p.title}
+                        </a>
+                        {(p.takeaway || p.snippet) && (
+                          <div className="small muted lit-snippet">
+                            <strong>Key finding:</strong> {p.takeaway || p.snippet}
+                          </div>
                         )}
                       </div>
-                      <a
-                        href={p.url}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        style={{ fontWeight: 600, fontSize: 12.6, display: "block", marginTop: 3 }}
-                      >
-                        {p.title}
-                      </a>
-                      {p.snippet && (
-                        <div className="small muted lit-snippet">{p.snippet}</div>
-                      )}
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
-          ))}
+                    ))}
+                  </div>
+                )}
+              </div>
+            );
+          })}
         </div>
       )}
 
       {/* Tab Panel: ClinicalTrials.gov */}
       {tab === "trials" && hasTrials && (
         <div style={{ marginTop: 8, display: "flex", flexDirection: "column", gap: 8 }}>
-          {trialsGroups.map((grp: any, idx: number) =>
-            (grp.trials || []).map((tr: any) => (
-              <div key={`${idx}-${tr.nct_id}`} className="lit-card">
-                <div className="row" style={{ gap: 6 }}>
+          {trialsGroups.map((grp: any, idx: number) => (
+            <div key={`tg-${idx}`} style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+              {grp.scope_note && (
+                <div className="small muted scope-note">{grp.compound}: {grp.scope_note}</div>
+              )}
+              {(grp.trials || []).map((tr: any) => (
+                <div key={`${idx}-${tr.nct_id}`} className="lit-card">
+                  <div className="row" style={{ gap: 6 }}>
+                    <a
+                      href={tr.url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="cite-chip cite-nct"
+                    >
+                      {tr.nct_id}
+                    </a>
+                    <span className="badge blue">{(tr.phases || ["N/A"]).join(", ")}</span>
+                    <span className="badge grey">{tr.status}</span>
+                    <span className="small muted">{grp.compound}</span>
+                    <span className="spacer" />
+                    {tr.start_date && <span className="small muted mono">{tr.start_date}</span>}
+                  </div>
                   <a
                     href={tr.url}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="cite-chip cite-nct"
+                    style={{ fontWeight: 600, fontSize: 12.6, display: "block", marginTop: 3 }}
                   >
-                    {tr.nct_id}
+                    {tr.title}
                   </a>
-                  <span className="badge blue">{(tr.phases || ["N/A"]).join(", ")}</span>
-                  <span className="badge grey">{tr.status}</span>
-                  <span className="small muted">{grp.compound}</span>
-                  <span className="spacer" />
-                  {tr.start_date && <span className="small muted mono">{tr.start_date}</span>}
+                  {tr.conditions?.length > 0 && (
+                    <div className="small muted" style={{ marginTop: 2 }}>
+                      Conditions: {tr.conditions.join(" · ")}
+                    </div>
+                  )}
                 </div>
-                <a
-                  href={tr.url}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  style={{ fontWeight: 600, fontSize: 12.6, display: "block", marginTop: 3 }}
-                >
-                  {tr.title}
-                </a>
-                {tr.conditions?.length > 0 && (
-                  <div className="small muted" style={{ marginTop: 2 }}>
-                    Conditions: {tr.conditions.join(" · ")}
-                  </div>
-                )}
-              </div>
-            ))
-          )}
+              ))}
+            </div>
+          ))}
         </div>
       )}
 

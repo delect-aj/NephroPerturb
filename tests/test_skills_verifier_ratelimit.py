@@ -33,6 +33,8 @@ def test_skills_and_routing():
         assert len(spec.instructions) < 2200, f"{sid} too verbose: {len(spec.instructions)} chars"
         assert 1 <= spec.max_steps <= 6, sid
         assert len(spec.allowed_tools) >= 2, sid
+        assert "### 1." in spec.instructions and "### 4." in spec.instructions, sid
+        assert "Literature" in spec.instructions and "[PMID:" in spec.instructions, sid
 
     # Routing checks
     s, _ = select_skill("Find reversal drugs for DKD glomeruli case and verify literature")
@@ -128,6 +130,17 @@ def test_literature_fallback_and_cache():
         os.environ["NEPHRO_STATE_DIR"] = tmp
         from app.engine import literature
 
+        # Verify _extract_takeaway prioritizes Conclusions/Results over opening Background
+        bg_abs = (
+            "BACKGROUND: Diabetic kidney disease causes end-stage renal failure worldwide and remains burdensome. "
+            "METHODS: Mice were randomized across three dosing regimens for six weeks. "
+            "RESULTS: Serum creatinine decreased and podocyte density was preserved. "
+            "CONCLUSIONS: Compound Z significantly attenuated glomerulosclerosis and albuminuria via TGF-beta blockade."
+        )
+        tk = literature._extract_takeaway(bg_abs)
+        assert "Compound Z significantly attenuated glomerulosclerosis" in tk, tk
+        assert not tk.startswith("BACKGROUND"), tk
+
         literature.reset_circuit_breakers()
         epmc_sample = {
             "hitCount": 12,
@@ -141,7 +154,7 @@ def test_literature_fallback_and_cache():
                         "authorString": "Doe J",
                         "citedByCount": 42,
                         "pubTypeList": {"pubType": ["Clinical Trial"]},
-                        "abstractText": "<p>Patients treated in a randomized placebo-controlled phase 2 study showed improved albuminuria.</p>",
+                        "abstractText": "<p>Background: DKD is common. Conclusions: Patients treated in a randomized placebo-controlled phase 2 study showed improved albuminuria.</p>",
                     }
                 ]
             },
@@ -152,6 +165,8 @@ def test_literature_fallback_and_cache():
             assert res1["evidence_tier"] == "Clinical"
             assert res1["cached"] is False
             assert res1["papers"][0]["pmid"] == "11122233"
+            assert "improved albuminuria" in res1["papers"][0]["takeaway"]
+            assert res1.get("synthesis", {}).get("efficacy_points"), res1
 
         # Second call MUST hit SQLite cache without calling network
         with mock.patch.object(literature, "_http_get", side_effect=AssertionError("Should hit cache")):

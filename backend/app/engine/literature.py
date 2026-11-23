@@ -65,6 +65,20 @@ _SAFETY_RE = re.compile(
 )
 _TAG_RE = re.compile(r"<[^>]+>")
 _WS_RE = re.compile(r"\s+")
+_CONCLUSION_SEC_RE = re.compile(
+    r"(?:^|\b)(?:CONCLUSIONS?|FINDINGS?|INTERPRETATION)\s*[:\-–]\s*(.+)$",
+    re.I,
+)
+_RESULTS_SEC_RE = re.compile(
+    r"(?:^|\b)RESULTS?\s*[:\-–]\s*(.+?)(?=(?:\bCONCLUSIONS?\s*[:\-–]|\bLIMITATIONS?\s*[:\-–]|$))",
+    re.I,
+)
+_OUTCOME_SENT_RE = re.compile(
+    r"\b(demonstrat\w*|showed|reduced|attenuat\w*|ameliorat\w*|improv\w*|inhibit\w*|"
+    r"protect\w*|prevent\w*|induc\w*|caus\w*|associat\w*|nephrotox\w*|significant\w*|"
+    r"preserved|decreased|increased|suppressed|randomized|trial|patients|suggest\w*|conclud\w*)\b",
+    re.I,
+)
 
 
 def reset_circuit_breakers() -> None:
@@ -88,6 +102,33 @@ def _strip_text(raw: str | None, max_len: int = 240) -> str:
     if len(clean) <= max_len:
         return clean
     return clean[: max_len - 1].rstrip() + "…"
+
+
+def _extract_takeaway(raw_abstract: str | None, title: str = "", max_len: int = 220) -> str:
+    """Extract Results/Conclusions or key outcome sentence instead of opening background."""
+    clean = _WS_RE.sub(" ", _TAG_RE.sub(" ", str(raw_abstract or ""))).strip()
+    if not clean:
+        return _strip_text(title, max_len)
+
+    m_con = _CONCLUSION_SEC_RE.search(clean)
+    if m_con and len(m_con.group(1).strip()) >= 25:
+        return _strip_text(m_con.group(1), max_len)
+
+    m_res = _RESULTS_SEC_RE.search(clean)
+    if m_res and len(m_res.group(1).strip()) >= 25:
+        return _strip_text(m_res.group(1), max_len)
+
+    sents = [s.strip() for s in re.split(r"(?<=[.!?])\s+", clean) if len(s.strip()) >= 25]
+    if len(sents) >= 2:
+        half = sents[len(sents) // 2 :]
+        scored = [s for s in reversed(half) if _OUTCOME_SENT_RE.search(s)]
+        if scored:
+            return _strip_text(scored[0], max_len)
+        any_scored = [s for s in reversed(sents) if _OUTCOME_SENT_RE.search(s)]
+        if any_scored:
+            return _strip_text(any_scored[0], max_len)
+        return _strip_text(sents[-1], max_len)
+    return _strip_text(clean, max_len)
 
 
 def _expand_disease_terms(disease_context: str | None) -> str:
@@ -182,17 +223,20 @@ def _query_europepmc(query: str, max_results: int = 4, timeout: float | None = N
             link = f"https://europepmc.org/article/PMC/{pmcid}"
         else:
             link = f"https://doi.org/{doi}"
+        clean_title = _strip_text(r.get("title"), 220)
+        takeaway = _extract_takeaway(r.get("abstractText"), title=clean_title, max_len=220)
         papers.append({
             "pmid": pmid or None,
             "pmcid": pmcid or None,
             "doi": doi or None,
-            "title": _strip_text(r.get("title"), 220),
+            "title": clean_title,
             "journal": _strip_text(journal, 80),
             "year": str(r.get("pubYear") or ""),
             "authors": _strip_text(r.get("authorString"), 90),
             "cited_by": int(r.get("citedByCount") or 0),
             "pub_types": [str(x) for x in pub_types[:4]],
-            "snippet": _strip_text(r.get("abstractText"), 240),
+            "takeaway": takeaway,
+            "snippet": takeaway,
             "url": link,
             "source": "europepmc",
         })
@@ -280,22 +324,27 @@ def _query_pubmed(query: str, max_results: int = 4, timeout: float = 8.0) -> dic
                 doi = val
             elif itype == "pmc" and not pmcid:
                 pmcid = val
-        abs_parts = [
-            "".join(ab.itertext()).strip()
-            for ab in art.findall(".//Article/Abstract/AbstractText")
-        ]
-        snippet = _strip_text(" ".join(abs_parts), 240)
+        abs_parts = []
+        for ab in art.findall(".//Article/Abstract/AbstractText"):
+            txt = "".join(ab.itertext()).strip()
+            if not txt:
+                continue
+            lbl = (ab.attrib.get("Label") or ab.attrib.get("NlmCategory") or "").strip()
+            abs_parts.append(f"{lbl}: {txt}" if lbl and not txt.upper().startswith(lbl.upper()) else txt)
+        clean_title = _strip_text(title, 220)
+        takeaway = _extract_takeaway(" ".join(abs_parts), title=clean_title, max_len=220)
         papers.append({
             "pmid": pmid,
             "pmcid": pmcid or None,
             "doi": doi or None,
-            "title": _strip_text(title, 220),
+            "title": clean_title,
             "journal": _strip_text(journal, 80),
             "year": str(year or ""),
             "authors": _strip_text(author_str, 90),
             "cited_by": None,
             "pub_types": pub_types[:4],
-            "snippet": snippet,
+            "takeaway": takeaway,
+            "snippet": takeaway,
             "url": f"https://pubmed.ncbi.nlm.nih.gov/{pmid}/",
             "source": "pubmed",
         })
@@ -379,6 +428,51 @@ def _overall_evidence_tier(eff_hits: int, safe_hits: int, papers: list[dict], pr
     return "Novel (0 renal papers)"
 
 
+def synthesize_literature_group(lit_group: dict) -> dict:
+    """Build deterministic extractive synthesis strictly grounded in retrieved papers."""
+    tier = lit_group.get("evidence_tier") or "Unknown"
+    eff_hits = int(lit_group.get("efficacy_total_hits") or 0)
+    safe_hits = int(lit_group.get("safety_total_hits") or 0)
+    provider = lit_group.get("provider") or "unknown"
+    papers = lit_group.get("papers") or []
+
+    efficacy_points = [
+        {
+            "pmid": p.get("pmid"),
+            "year": p.get("year") or "—",
+            "category": p.get("category") or "Mechanistic",
+            "title": p.get("title") or "",
+            "finding": p.get("takeaway") or p.get("snippet") or p.get("title") or "",
+        }
+        for p in papers
+        if p.get("query_role") == "efficacy" and p.get("category") != "Safety Warning"
+    ][:3]
+
+    safety_points = [
+        {
+            "pmid": p.get("pmid"),
+            "year": p.get("year") or "—",
+            "category": p.get("category") or "Safety Warning",
+            "title": p.get("title") or "",
+            "finding": p.get("takeaway") or p.get("snippet") or p.get("title") or "",
+        }
+        for p in papers
+        if p.get("query_role") == "safety" or p.get("category") == "Safety Warning"
+    ][:2]
+
+    if eff_hits == 0 and not efficacy_points:
+        novelty_note = "High repurposing novelty: 0 kidney efficacy publications indexed."
+    else:
+        novelty_note = f"Reported in kidney literature ({eff_hits} efficacy hit(s) indexed)."
+
+    return {
+        "verdict": f"{tier} — {eff_hits} kidney efficacy hit(s), {safe_hits} nephrotoxicity/AKI hit(s) via {provider}.",
+        "novelty_note": novelty_note,
+        "efficacy_points": efficacy_points,
+        "safety_points": safety_points,
+    }
+
+
 def search_kidney_literature(
     entity: str,
     disease_context: str = "kidney disease",
@@ -391,7 +485,7 @@ def search_kidney_literature(
         raise ValueError("entity is required for literature search")
     clean_ctx = (disease_context or "kidney disease").strip()
     n_max = max(2, min(10, int(max_papers)))
-    cache_key = "lit:" + hashlib.sha256(
+    cache_key = "lit2:" + hashlib.sha256(
         f"{clean_ent.lower()}|{clean_ctx.lower()}|{int(include_safety)}|{n_max}".encode()
     ).hexdigest()
 
@@ -442,6 +536,7 @@ def search_kidney_literature(
         "safety_total_hits": safe_hits,
         "papers": merged,
     }
+    out["synthesis"] = synthesize_literature_group(out)
     if eff_res.get("error"):
         out["error"] = eff_res["error"]
     else:
@@ -449,46 +544,16 @@ def search_kidney_literature(
     return out
 
 
-def search_clinical_trials(
-    compound: str,
-    condition: str = "kidney disease",
-    max_trials: int = 5,
-) -> dict:
-    """Query ClinicalTrials.gov v2 REST API for registered kidney trials."""
-    clean_cp = re.sub(r'["\n\r]+', " ", (compound or "").strip())
-    if not clean_cp:
-        raise ValueError("compound is required for clinical trials search")
-    clean_cond = (condition or "kidney disease").strip()
-    n_max = max(1, min(10, int(max_trials)))
-    cache_key = "ct:" + hashlib.sha256(
-        f"{clean_cp.lower()}|{clean_cond.lower()}|{n_max}".encode()
-    ).hexdigest()
-
-    cached = _cache_get(cache_key)
-    if cached is not None:
-        return cached
-
+def _fetch_trials_once(compound: str, condition: str, n_max: int) -> dict:
     params = urllib.parse.urlencode({
-        "query.intr": clean_cp,
-        "query.cond": clean_cond,
+        "query.intr": compound,
+        "query.cond": condition,
         "pageSize": str(n_max),
         "countTotal": "true",
     })
     url = f"https://clinicaltrials.gov/api/v2/studies?{params}"
-    try:
-        raw = _http_get(url, timeout=8.0)
-        data = json.loads(raw.decode("utf-8", errors="replace"))
-    except Exception as exc:
-        return {
-            "compound": clean_cp,
-            "condition": clean_cond,
-            "provider": "clinicaltrials.gov",
-            "cached": False,
-            "total_count": 0,
-            "trials": [],
-            "error": str(exc)[:160],
-        }
-
+    raw = _http_get(url, timeout=8.0)
+    data = json.loads(raw.decode("utf-8", errors="replace"))
     trials = []
     for st in data.get("studies") or []:
         ps = st.get("protocolSection") or {}
@@ -510,14 +575,62 @@ def search_clinical_trials(
             "start_date": start_s,
             "url": f"https://clinicaltrials.gov/study/{nct_id}",
         })
+    return {"total_count": int(data.get("totalCount") or len(trials)), "trials": trials}
+
+
+def search_clinical_trials(
+    compound: str,
+    condition: str = "kidney disease",
+    max_trials: int = 5,
+) -> dict:
+    """Query ClinicalTrials.gov v2 REST API, broadening to 'kidney disease' if narrow yields 0."""
+    clean_cp = re.sub(r'["\n\r]+', " ", (compound or "").strip())
+    if not clean_cp:
+        raise ValueError("compound is required for clinical trials search")
+    clean_cond = (condition or "kidney disease").strip()
+    n_max = max(1, min(10, int(max_trials)))
+    cache_key = "ct2:" + hashlib.sha256(
+        f"{clean_cp.lower()}|{clean_cond.lower()}|{n_max}".encode()
+    ).hexdigest()
+
+    cached = _cache_get(cache_key)
+    if cached is not None:
+        return cached
+
+    try:
+        res = _fetch_trials_once(clean_cp, clean_cond, n_max)
+    except Exception as exc:
+        return {
+            "compound": clean_cp,
+            "condition": clean_cond,
+            "provider": "clinicaltrials.gov",
+            "cached": False,
+            "total_count": 0,
+            "trials": [],
+            "error": str(exc)[:160],
+        }
+
+    scope_note = None
+    eff_cond = clean_cond
+    if res["total_count"] == 0 and clean_cond.lower() != "kidney disease":
+        try:
+            broad = _fetch_trials_once(clean_cp, "kidney disease", n_max)
+            scope_note = f"0 trials matched '{clean_cond}'; broadened to 'kidney disease' ({broad['total_count']} found)."
+            if broad["total_count"] > 0:
+                res = broad
+                eff_cond = "kidney disease"
+        except Exception:
+            pass
 
     out = {
         "compound": clean_cp,
-        "condition": clean_cond,
+        "condition": eff_cond,
         "provider": "clinicaltrials.gov",
         "cached": False,
-        "total_count": int(data.get("totalCount") or len(trials)),
-        "trials": trials,
+        "total_count": res["total_count"],
+        "trials": res["trials"],
     }
+    if scope_note:
+        out["scope_note"] = scope_note
     _cache_set(cache_key, "clinicaltrials.gov", out)
     return out

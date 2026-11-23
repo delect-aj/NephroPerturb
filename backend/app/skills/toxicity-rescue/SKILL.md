@@ -13,15 +13,27 @@ allowed_tools:
   - search_clinical_trials
 requires_literature: true
 output_sections:
-  - NephroSafe Safety Verdict
-  - T-DIKI Attribution & K-PRL Drivers
-  - Safer Structural Analogs
-  - Clinical & Literature Audit
+  - "1. NephroSafe Verdict & T-DIKI Drivers"
+  - "2. Safer Structural Analog Rescue"
+  - "3. Literature & Clinical Synthesis"
+  - "4. Actionable Recommendation"
 example_prompt: "Is tacrolimus nephrotoxic? Explain its T-DIKI drivers, check nephrotoxicity literature, and find safer Low T-DIKI analogs"
 ---
-## Execution Protocol (Strictly Deterministic & Token-Lean)
-1. **Profile Compound**: Call `profile_compound` for the target compound (or session token) to inspect `tdiki_tier`, `tdiki_prob`, `diril_label`, `clinical_phase`, MoA, and K-PRL signature.
-2. **Attribution**: Call `explain_tdiki` to retrieve the exact structural/transcriptomic risk drivers.
-3. **Rescue Search**: If `tdiki_tier` is `"High"` or `"Moderate"`, OR `diril_label == 1`, OR the user asked for analogs/alternatives, call `find_safe_analogs(compound=..., max_diki_tier="Low", top_k=10)` to identify structurally similar low-risk candidates.
-4. **Safety Literature & Trials**: Call `search_literature(entity=<compound>, include_safety=true)` (and `search_clinical_trials` if time permits or requested).
-5. **Stop & Synthesize**: Write <= 200 words stating the safety verdict, top attribution drivers, best safer analog(s) with Tanimoto & T-DIKI tier, and grounded `[PMID:<id>]` / `[NCT<id>]` evidence. Never invent numbers or citations.
+## Execution Protocol
+1. Batch `profile_compound` + `explain_tdiki` for the target compound (prefer exact `pert_id` once resolved).
+2. If `tdiki_tier` is `High`/`Moderate`, `diril_label == 1`, or user requests alternatives, call `find_safe_analogs(compound=..., max_diki_tier="Low", top_k=10)`.
+3. Batch `search_literature(entity=<name>, include_safety=true)` + `search_clinical_trials` on the query compound.
+
+## Fixed Output Format (Use Exact Headings)
+### 1. NephroSafe Verdict & T-DIKI Drivers
+State `tdiki_tier`, `tdiki_prob`, `DIRIL` label, `tdiki_struct`/`tdiki_tx`, and top SHAP/attribution feature contributors.
+### 2. Safer Structural Analog Rescue
+Report `safe_analogs_found` (or explicitly state if 0 `Low` T-DIKI analogs existed in top 120) and list Top-3 distinct neighbors with `pert_id`, Tanimoto, T-DIKI, and MoA.
+### 3. Literature & Clinical Synthesis
+Synthesize retrieved paper `takeaway`s into 4 concise bullets:
+- **Evidence Verdict**: tier plus efficacy vs. safety hit counts.
+- **Kidney Efficacy Findings**: key outcomes/mechanisms with `[PMID:<digits>]`.
+- **Nephrotoxicity Safety Audit**: documented renal toxicity mechanisms/warnings with `[PMID:<digits>]`.
+- **Clinical Trials**: relevant trial status/phases with `[NCT<8-digits>]` (or state 0 trials).
+### 4. Actionable Recommendation
+Concise safety guidance and whether a rescued analog is viable. Never invent PMIDs, NCTs, BRDs, or numbers.

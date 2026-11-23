@@ -11,14 +11,22 @@ allowed_tools:
   - profile_compound
 requires_literature: true
 output_sections:
-  - Evidence Tier Verdict
-  - Kidney Efficacy Literature
-  - Nephrotoxicity Safety Reports
-  - Registered Clinical Trials
+  - "1. Evidence Verdict & Novelty"
+  - "2. Efficacy Literature Synthesis"
+  - "3. Nephrotoxicity & Clinical Trials"
+  - "4. Decision Takeaway"
 example_prompt: "Check Europe PMC literature, nephrotoxicity reports, and clinical trials for dexamethasone in diabetic kidney disease"
 ---
-## Execution Protocol (Strictly Deterministic & Token-Lean)
-1. **Resolve Entities**: Identify up to 2 target drugs/genes from the query or session ledger (`#1`, `#2`, etc.). Optionally call `profile_compound` if NephroSafe `tdiki_tier` is missing for a compound.
-2. **Bidirectional Literature**: Call `search_literature(entity=..., disease_context=..., include_safety=true)` for each target (max 2 targets).
-3. **Clinical Trials**: Call `search_clinical_trials(compound=..., condition=...)` for each compound.
-4. **Stop & Synthesize**: Summarize overall `evidence_tier`, separate efficacy findings from nephrotoxicity warnings, highlight `Novel (0 renal papers)` when empty, and cite ONLY observed `[PMID:<id>]` and `[NCT<id>]` identifiers (<= 220 words).
+## Execution Protocol
+1. Resolve up to 2 target drugs/genes (including session references `#1`, `#2`).
+2. Batch `search_literature(entity=..., disease_context=..., include_safety=true)` + `search_clinical_trials` (and `profile_compound` if T-DIKI tier is unknown).
+
+## Fixed Output Format (Use Exact Headings)
+### 1. Evidence Verdict & Novelty
+State per-entity `evidence_tier`, hit counts (`efficacy_total_hits`, `safety_total_hits`), provider, and whether it represents `Novel (0 renal papers)`.
+### 2. Efficacy Literature Synthesis
+Synthesize concrete biological/clinical conclusions across papers using their `takeaway`s (not just titles), citing `[PMID:<digits>]` after each claim.
+### 3. Nephrotoxicity & Clinical Trials
+Summarize nephrotoxicity warnings from safety papers (`[PMID:<digits>]`) alongside NephroSafe `T-DIKI`/`DIRIL` status, plus registered kidney trials (`[NCT<8-digits>]` with phase & status).
+### 4. Decision Takeaway
+One concise translational recommendation grounded in both efficacy and safety evidence. Never invent PMIDs, NCTs, BRDs, or numbers.

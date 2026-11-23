@@ -11,13 +11,23 @@ allowed_tools:
   - search_literature
 requires_literature: true
 output_sections:
-  - Chemical Neighbors & Consensus MoA
-  - NephroSafe Risk across Analogs
-  - Kidney Literature Support
+  - "1. Structural Neighbors & Consensus MoA"
+  - "2. Top Neighbor Safety & Kidney Profile"
+  - "3. Literature & Clinical Synthesis"
+  - "4. Actionable Recommendation"
 example_prompt: "Find structural analogs to CC(=O)OC1=CC=CC=C1C(=O)O, infer MoA and NephroSafe risk, and check kidney literature for the top neighbor"
 ---
-## Execution Protocol (Strictly Deterministic & Token-Lean)
-1. **ECFP4 Scan**: Call `find_safe_analogs` using the provided `smiles` or `compound` (keep `max_diki_tier` unset unless user requested low-toxicity filtering).
-2. **Profile Closest Annotated Neighbor**: Select the top neighbor with an annotated MoA (or #1 hit) and call `profile_compound` to obtain targets, PROGENy pathways, T-DIKI tier, and DIRIL label.
-3. **Literature Validation**: Call `search_literature` on the top named neighbor with `disease_context="kidney disease"`.
-4. **Stop & Synthesize**: Report consensus MoA, top Tanimoto neighbors with T-DIKI safety tiers, and grounded `[PMID:<id>]` literature in <= 180 words.
+## Execution Protocol
+1. Call `find_safe_analogs` using the provided `smiles` or `compound`.
+2. Call `profile_compound` using the **exact `pert_id`** of the closest named/MoA-annotated neighbor.
+3. Call `search_literature(entity=<neighbor name>, include_safety=true)` on that top neighbor.
+
+## Fixed Output Format (Use Exact Headings)
+### 1. Structural Neighbors & Consensus MoA
+Report inferred `consensus_moa` and Top-3 analogs (`pert_id`, Tanimoto, T-DIKI tier, phase).
+### 2. Top Neighbor Safety & Kidney Profile
+Summarize targets, key PROGENy/renal modules, T-DIKI probability, and DIRIL status of the profiled neighbor.
+### 3. Literature & Clinical Synthesis
+Synthesize the neighbor's retrieved paper `takeaway`s cleanly (**Evidence Verdict**, **Efficacy Findings** with `[PMID:<digits>]`, **Safety Signals** with `[PMID:<digits>]`, and novelty standing).
+### 4. Actionable Recommendation
+State predicted pharmacological MoA and safest chemical starting point. Never invent PMIDs, BRDs, or numbers.

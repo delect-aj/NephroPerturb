@@ -11,13 +11,22 @@ allowed_tools:
   - search_clinical_trials
 requires_literature: true
 output_sections:
-  - Safety & Clinical Maturity Comparison
-  - Anti-Fibrotic vs. Metabolic/Podocyte Pathways
-  - Literature & Clinical Trial Standing
-  - Recommendation
+  - "1. Safety & Clinical Maturity Comparison"
+  - "2. Pathway & Renal Module Trade-offs"
+  - "3. Literature & Clinical Synthesis"
+  - "4. Context-Dependent Recommendation"
 example_prompt: "Compare dexamethasone and losartan head-to-head on renal fibrosis modules, podocyte protection, T-DIKI safety, and kidney literature"
 ---
-## Execution Protocol (Strictly Deterministic & Token-Lean)
-1. **Head-to-Head Matrix**: Extract 2-4 compound names or resolve `#1`/`#2`/`#3` from the session ledger and call `compare_compounds` ONCE.
-2. **Evidence Enrichment**: Call `search_literature` (and `search_clinical_trials` if within step budget) on the top 2 compared compounds (skip if already cached in session ledger).
-3. **Stop & Synthesize**: Contrast safety (`tdiki_tier`, `diril_label`), `ECM_fibrosis` / `TGFb_SMAD` suppression, `Podocyte_slit` / `PT_FAO_mito` preservation, and real-world `[PMID:<id>]` / `[NCT<id>]` evidence. End with a concrete context-dependent pick in <= 220 words.
+## Execution Protocol
+1. Resolve 2-4 compound names or `#1`/`#2` from session ledger and call `compare_compounds`.
+2. Batch `search_literature` + `search_clinical_trials` on top 2 compared compounds (reuse ledger if already audited).
+
+## Fixed Output Format (Use Exact Headings)
+### 1. Safety & Clinical Maturity Comparison
+Compare `clinical_phase`, `MoA`, `tdiki_tier` (`tdiki_prob`), and `DIRIL`, explicitly citing `highlights.safest_kidney`.
+### 2. Pathway & Renal Module Trade-offs
+Contrast `ECM_fibrosis`, `TGFb_SMAD`, `Podocyte_slit`, `PT_FAO_mito`, and top PROGENy differences with exact numbers.
+### 3. Literature & Clinical Synthesis
+Compare each compound's `evidence_tier`, key efficacy findings from `takeaway`s (`[PMID:<digits>]`), nephrotoxicity warnings (`[PMID:<digits>]`), and registered kidney trials (`[NCT<8-digits>]`).
+### 4. Context-Dependent Recommendation
+Name which drug wins for efficacy vs. kidney safety and recommend a clear lead. Never invent PMIDs, NCTs, BRDs, or numbers.
