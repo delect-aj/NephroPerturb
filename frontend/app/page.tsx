@@ -124,6 +124,8 @@ export default function Home() {
           <img
             src="/hero.svg"
             alt="NephroPerturb kidney perturbation network illustration"
+            width={440}
+            height={289}
             className="hero-art"
           />
         </div>

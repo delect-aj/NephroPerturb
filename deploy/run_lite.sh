@@ -28,13 +28,18 @@ export VECLIB_MAXIMUM_THREADS=1
 export NUMEXPR_NUM_THREADS=1
 export ARROW_NUM_THREADS=1
 
+# Compute endpoints are serialized by _COMPUTE_LOCK in main.py; keep HTTP concurrency >=64
+# so browsers can load static CSS/JS/SVG assets in parallel without HTTP 503.
+# Legacy LIMIT_CONCURRENCY (e.g. 4 in older systemd units) is intentionally ignored.
+HTTP_CONCURRENCY="${HTTP_CONCURRENCY:-128}"
+
 cd "$ROOT/backend"
 CMD=(
   "$PYTHON" -m uvicorn app.main:app
   --host "${HOST:-0.0.0.0}"
   --port "${PORT:-8091}"
   --workers 1
-  --limit-concurrency "${LIMIT_CONCURRENCY:-8}"
+  --limit-concurrency "$HTTP_CONCURRENCY"
 )
 
 if [ "${PIN_CPU0:-1}" = "1" ] && command -v taskset >/dev/null 2>&1; then

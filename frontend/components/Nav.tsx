@@ -6,6 +6,8 @@ import { usePathname } from "next/navigation";
 function Icon({ name }: { name: string }) {
   const p = {
     viewBox: "0 0 24 24",
+    width: 16,
+    height: 16,
     fill: "none",
     stroke: "currentColor",
     strokeWidth: 1.9,
@@ -109,7 +111,13 @@ export default function Nav() {
   return (
     <aside className="sidebar">
       <div className="brand-wrap">
-        <img src="/logo.svg" alt="NephroPerturb logo" className="brand-logo" />
+        <img
+          src="/logo.svg"
+          alt="NephroPerturb logo"
+          width={34}
+          height={34}
+          className="brand-logo"
+        />
         <div className="brand">
           Nephro<span>Perturb</span>
         </div>

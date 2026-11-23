@@ -60,7 +60,7 @@ bash deploy/bootstrap_lite.sh ~/renalkb
 `bootstrap_lite.sh` 会自动完成：
 1. 创建 `.venv-lite` 并仅安装最小依赖 `backend/requirements-lite.txt`（剔除 `scikit-learn` / `lightgbm` / `shap` / `scipy` / `numba` / `h5py` / `sqlalchemy` / `nodejs`）；
 2. 校验 `store_lite/` 与 `frontend/out/` 完整性；
-3. 调用 `deploy/run_lite.sh` 以**单进程、1 核线程限制（`taskset -c 0` + `*_NUM_THREADS=1`）、`--workers 1 --limit-concurrency 8`** 在 `:8091` 端口同时启动：
+3. 调用 `deploy/run_lite.sh` 以**单进程、1 核线程限制（`taskset -c 0` + `*_NUM_THREADS=1`）、`--workers 1 --limit-concurrency 128`**（计算接口由 `_COMPUTE_LOCK` 串行保护，静态 CSS/JS/SVG 并发加载不触发 503）在 `:8091` 端口同时启动：
    - Web 页面：`http://<host>:8091/`
    - REST API：`http://<host>:8091/api/v1/...`
    - MCP Server（Streamable HTTP）：`http://<host>:8091/mcp`
