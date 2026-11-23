@@ -15,10 +15,10 @@ const STATS = [
 ];
 
 const HOW_STEPS = [
-  ["Intent Routing", "Rules map queries to SOP-1..6 or optional DeepSeek extracts JSON slots."],
-  ["Entity Resolution", "Resolves HGNC aliases, GEO cohort IDs, drug names, or SMILES."],
-  ["Tool Execution", "Runs exact scoring, knockdown mimicry, or ECFP4 similarity tools."],
-  ["NephroSafe Audit", "Flags High T-DIKI / DIRIL candidates and emits a grounded template."],
+  ["Match Workflow", "Identifies your task type (SOP-1 to SOP-6) using fixed rules, without AI guessing."],
+  ["Standardize Inputs", "Converts gene symbols, drug names, kidney cohorts, or SMILES into database IDs."],
+  ["Run Analysis", "Computes exact reversal scores, knockdown matches, or chemical similarity."],
+  ["Safety Check & Report", "Flags nephrotoxic drugs (T-DIKI / DIRIL) and returns a traceable result table."],
 ];
 
 const EXPLORE_TILES = [

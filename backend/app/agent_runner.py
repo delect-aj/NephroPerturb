@@ -250,7 +250,7 @@ def run_agent(text: str, use_llm: bool, tools: dict) -> dict:
     if plan.get("llm_error"):
         plan_detail += f" (DeepSeek fallback to rules: {plan['llm_error'][:60]})"
     steps.append({
-        "name": "Parse intent",
+        "name": "Match workflow",
         "tool": router_tool,
         "status": "done",
         "detail": plan_detail,
@@ -261,7 +261,7 @@ def run_agent(text: str, use_llm: bool, tools: dict) -> dict:
         msg = plan.get("message") or (
             "This question is outside NephroPerturb's scope (kidney disease drug repurposing)."
         )
-        steps.append({"name": "Resolve parameters", "tool": "guardrail", "status": "skipped",
+        steps.append({"name": "Standardize inputs", "tool": "guardrail", "status": "skipped",
                       "detail": "Rejected as out-of-scope before database calls", "ms": 0.0})
         return _base_resp(
             query, mode, "OUT_OF_SCOPE", "out_of_scope", msg, params, {}, steps, t_total,
@@ -281,7 +281,7 @@ def run_agent(text: str, use_llm: bool, tools: dict) -> dict:
             avail = ", ".join(c["case_id"] for c in all_cases)
             msg = (f"No curated GEO cohort matched '{params.get('case_id') or query}'. "
                    f"Available cohorts: {avail}.")
-            steps.append({"name": "Resolve parameters", "tool": "case_resolver", "status": "error",
+            steps.append({"name": "Standardize inputs", "tool": "case_resolver", "status": "error",
                           "detail": msg, "ms": _ms(t0)})
             return _base_resp(
                 query, mode, sop_id, "needs_input", msg, params, {}, steps, t_total,
@@ -295,7 +295,7 @@ def run_agent(text: str, use_llm: bool, tools: dict) -> dict:
         resolved = {"case_id": case_obj["case_id"], "disease_code": case_obj.get("disease_code"),
                     "disease_name": case_obj.get("disease_name"), "gse": case_obj.get("gse") or case_obj.get("dataset_accession")}
         steps.append({
-            "name": "Resolve parameters", "tool": "case_resolver", "status": "done",
+            "name": "Standardize inputs", "tool": "case_resolver", "status": "done",
             "detail": f"{case_obj['case_id']} ({case_obj.get('disease_name')}, {resolved['gse']})",
             "ms": _ms(t0),
         })
@@ -304,7 +304,7 @@ def run_agent(text: str, use_llm: bool, tools: dict) -> dict:
         hit = _resolve_compound_token(query, params.get("compound"), tools["find_compound"])
         if hit is None:
             msg = "Could not identify a known compound in your query. Try e.g. 'Profile dexamethasone' or a BRD ID."
-            steps.append({"name": "Resolve parameters", "tool": "compound_resolver", "status": "error",
+            steps.append({"name": "Standardize inputs", "tool": "compound_resolver", "status": "error",
                           "detail": "No compound token matched the 21,299-compound index", "ms": _ms(t0)})
             return _base_resp(
                 query, mode, sop_id, "needs_input", msg, params, {}, steps, t_total,
@@ -317,7 +317,7 @@ def run_agent(text: str, use_llm: bool, tools: dict) -> dict:
             )
         resolved = {"pert_id": str(hit["pert_id"]), "pert_iname": hit.get("pert_iname") or str(hit["pert_id"])}
         steps.append({
-            "name": "Resolve parameters", "tool": "compound_resolver", "status": "done",
+            "name": "Standardize inputs", "tool": "compound_resolver", "status": "done",
             "detail": f"Resolved '{resolved['pert_iname']}' -> {resolved['pert_id']}",
             "ms": _ms(t0),
         })
@@ -325,7 +325,7 @@ def run_agent(text: str, use_llm: bool, tools: dict) -> dict:
     elif sop_id == "SOP-5":
         if params.get("smiles"):
             resolved = {"smiles": params["smiles"]}
-            steps.append({"name": "Resolve parameters", "tool": "smiles_extractor", "status": "done",
+            steps.append({"name": "Standardize inputs", "tool": "smiles_extractor", "status": "done",
                           "detail": f"SMILES={resolved['smiles']}", "ms": _ms(t0)})
         elif params.get("pert_id"):
             hit = tools["find_compound"](params["pert_id"])
@@ -333,13 +333,13 @@ def run_agent(text: str, use_llm: bool, tools: dict) -> dict:
                 resolved = {"pert_id": str(hit["pert_id"]), "pert_iname": hit.get("pert_iname")}
             else:
                 resolved = {"pert_id": params["pert_id"]}
-            steps.append({"name": "Resolve parameters", "tool": "compound_resolver", "status": "done",
+            steps.append({"name": "Standardize inputs", "tool": "compound_resolver", "status": "done",
                           "detail": f"Reference compound {resolved['pert_id']}", "ms": _ms(t0)})
         else:
             hit = _resolve_compound_token(query, None, tools["find_compound"])
             if hit is None:
                 msg = "Please provide a SMILES string, compound name, or BRD ID for structure search."
-                steps.append({"name": "Resolve parameters", "tool": "structure_resolver", "status": "error",
+                steps.append({"name": "Standardize inputs", "tool": "structure_resolver", "status": "error",
                               "detail": "No valid SMILES or known compound name detected", "ms": _ms(t0)})
                 return _base_resp(
                     query, mode, sop_id, "needs_input", msg, params, {}, steps, t_total,
@@ -350,14 +350,14 @@ def run_agent(text: str, use_llm: bool, tools: dict) -> dict:
                     ],
                 )
             resolved = {"pert_id": str(hit["pert_id"]), "pert_iname": hit.get("pert_iname")}
-            steps.append({"name": "Resolve parameters", "tool": "compound_resolver", "status": "done",
+            steps.append({"name": "Standardize inputs", "tool": "compound_resolver", "status": "done",
                           "detail": f"Resolved '{resolved['pert_iname']}' -> {resolved['pert_id']}", "ms": _ms(t0)})
 
     elif sop_id == "SOP-4":
         gene = params.get("gene")
         if not gene:
             msg = "Please name a human target gene symbol (e.g., 'Which compounds mimic knockdown of TGFBR1?')."
-            steps.append({"name": "Resolve parameters", "tool": "gene_resolver", "status": "error",
+            steps.append({"name": "Standardize inputs", "tool": "gene_resolver", "status": "error",
                           "detail": "No gene symbol found", "ms": _ms(t0)})
             return _base_resp(
                 query, mode, sop_id, "needs_input", msg, params, {}, steps, t_total,
@@ -365,14 +365,14 @@ def run_agent(text: str, use_llm: bool, tools: dict) -> dict:
                 suggestions=["Which compounds mimic knockdown of TGFBR1?", "Target APOL1 knockout mimicry compounds"],
             )
         resolved = {"gene": str(gene).strip()}
-        steps.append({"name": "Resolve parameters", "tool": "gene_resolver", "status": "done",
+        steps.append({"name": "Standardize inputs", "tool": "gene_resolver", "status": "done",
                       "detail": f"Target gene={resolved['gene']}", "ms": _ms(t0)})
 
     elif sop_id == "SOP-3":
         targets = params.get("targets") or {}
         if not targets:
             msg = "Please specify at least one pathway, TF, or renal module with direction (e.g., 'Inhibit SMAD3 and TGFb, activate PPARA')."
-            steps.append({"name": "Resolve parameters", "tool": "pathway_resolver", "status": "error",
+            steps.append({"name": "Standardize inputs", "tool": "pathway_resolver", "status": "error",
                           "detail": "No known pathway/TF matched", "ms": _ms(t0)})
             return _base_resp(
                 query, mode, sop_id, "needs_input", msg, params, {}, steps, t_total,
@@ -380,7 +380,7 @@ def run_agent(text: str, use_llm: bool, tools: dict) -> dict:
                 suggestions=["Inhibit SMAD3 and TGFb, activate PPARA", "Compounds that inhibit TGFB signaling"],
             )
         resolved = {"targets": targets}
-        steps.append({"name": "Resolve parameters", "tool": "pathway_resolver", "status": "done",
+        steps.append({"name": "Standardize inputs", "tool": "pathway_resolver", "status": "done",
                       "detail": ", ".join(f"{k}:{'+1' if v > 0 else '-1'}" for k, v in targets.items()),
                       "ms": _ms(t0)})
 
@@ -394,7 +394,7 @@ def run_agent(text: str, use_llm: bool, tools: dict) -> dict:
         if not up_genes and not down_genes:
             msg = ("Please provide up-regulated and/or down-regulated gene symbols "
                    "(e.g., 'Up: COL1A1 COL3A1 FN1 TGFB1; Down: NPHS1 NPHS2 PPARA').")
-            steps.append({"name": "Resolve parameters", "tool": "signature_parser", "status": "error",
+            steps.append({"name": "Standardize inputs", "tool": "signature_parser", "status": "error",
                           "detail": "Both up_genes and down_genes are empty", "ms": _ms(t0)})
             return _base_resp(
                 query, mode, sop_id, "needs_input", msg, params, {}, steps, t_total,
@@ -415,7 +415,7 @@ def run_agent(text: str, use_llm: bool, tools: dict) -> dict:
             "filters": filters,
         }
         steps.append({
-            "name": "Resolve parameters", "tool": "signature_parser", "status": "done",
+            "name": "Standardize inputs", "tool": "signature_parser", "status": "done",
             "detail": f"up={len(up_genes)}, down={len(down_genes)}, context={resolved['context']}",
             "ms": _ms(t0),
         })
@@ -467,7 +467,7 @@ def run_agent(text: str, use_llm: bool, tools: dict) -> dict:
             call_detail = f"{endpoint} -> {len(raw_res.get('results', []))} candidates"
         else:
             raise ValueError(f"Unsupported SOP {sop_id}")
-        steps.append({"name": "Call deterministic tool", "tool": tool_name, "status": "done",
+        steps.append({"name": "Run analysis", "tool": tool_name, "status": "done",
                       "detail": call_detail, "ms": _ms(t0)})
     except Exception as exc:
         err_msg = getattr(exc, "detail", None) or str(exc)
@@ -476,7 +476,7 @@ def run_agent(text: str, use_llm: bool, tools: dict) -> dict:
             "SOP-3": "nephro_query_pathway_tf", "SOP-4": "nephro_target_mimicry",
             "SOP-5": "nephro_infer_moa", "SOP-6": "nephro_run_renal_case",
         }
-        steps.append({"name": "Call deterministic tool", "tool": tool_map.get(sop_id, "engine"),
+        steps.append({"name": "Run analysis", "tool": tool_map.get(sop_id, "engine"),
                       "status": "error", "detail": str(err_msg), "ms": _ms(t0)})
         return _base_resp(
             query, mode, sop_id, "error", f"Execution error: {err_msg}", params, resolved, steps, t_total,
@@ -494,7 +494,7 @@ def run_agent(text: str, use_llm: bool, tools: dict) -> dict:
         rows = raw_res.get("results", [])[:15]
         flagged = sum(1 for r in rows if r.get("tdiki_tier") == "High" or r.get("diril_label") == 1)
         steps.append({
-            "name": "NephroSafe guardrail", "tool": "nephrosafe_rerank", "status": "done",
+            "name": "Safety check", "tool": "nephrosafe_rerank", "status": "done",
             "detail": f"{flagged} of {len(rows)} top candidates flagged (High T-DIKI or DIRIL-positive)",
             "ms": _ms(t0),
         })
@@ -550,7 +550,7 @@ def run_agent(text: str, use_llm: bool, tools: dict) -> dict:
         prob = tdiki.get("prob")
         diril_str = _fmt_diril(tdiki.get("diril_label"))
         steps.append({
-            "name": "NephroSafe guardrail", "tool": "nephrosafe_profile", "status": "done",
+            "name": "Safety check", "tool": "nephrosafe_profile", "status": "done",
             "detail": f"T-DIKI v2 tier={tier} (p={_fmt_num(prob, 3)}) · DIRIL={diril_str}",
             "ms": _ms(t0),
         })
@@ -593,7 +593,7 @@ def run_agent(text: str, use_llm: bool, tools: dict) -> dict:
         rows = raw_res.get("results", [])[:15]
         flagged = sum(1 for r in rows if r.get("tdiki_tier") == "High" or r.get("diril_label") == 1)
         steps.append({
-            "name": "NephroSafe guardrail", "tool": "nephrosafe_rerank", "status": "done",
+            "name": "Safety check", "tool": "nephrosafe_rerank", "status": "done",
             "detail": f"{flagged} of {len(rows)} top candidates flagged (High T-DIKI or DIRIL-positive)",
             "ms": _ms(t0),
         })
@@ -638,7 +638,7 @@ def run_agent(text: str, use_llm: bool, tools: dict) -> dict:
         genetics = raw_res.get("genetic_perturbations") or []
         gene_meta = raw_res.get("gene") or {}
         steps.append({
-            "name": "NephroSafe guardrail", "tool": "nephrosafe_annotation", "status": "skipped",
+            "name": "Safety check", "tool": "nephrosafe_annotation", "status": "skipped",
             "detail": "Genetic knockdown mimicry table carries similarity scores only; open individual compounds for T-DIKI",
             "ms": _ms(t0),
         })
@@ -676,7 +676,7 @@ def run_agent(text: str, use_llm: bool, tools: dict) -> dict:
     elif sop_id == "SOP-5":
         rows = raw_res.get("results", [])[:15]
         steps.append({
-            "name": "NephroSafe guardrail", "tool": "nephrosafe_annotation", "status": "skipped",
+            "name": "Safety check", "tool": "nephrosafe_annotation", "status": "skipped",
             "detail": "Structure similarity returns ECFP4 Tanimoto & MoA; click any neighbor for full T-DIKI profile",
             "ms": _ms(t0),
         })
