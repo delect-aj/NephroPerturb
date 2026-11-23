@@ -385,8 +385,12 @@ def run_agent(text: str, use_llm: bool, tools: dict) -> dict:
                       "ms": _ms(t0)})
 
     elif sop_id == "SOP-1":
-        up_genes = params.get("up_genes") or []
-        down_genes = params.get("down_genes") or []
+        raw_up = params.get("up_genes") or []
+        raw_dn = params.get("down_genes") or []
+        up_genes = re.split(r"[\s,;]+", raw_up) if isinstance(raw_up, str) else list(raw_up)
+        down_genes = re.split(r"[\s,;]+", raw_dn) if isinstance(raw_dn, str) else list(raw_dn)
+        up_genes = [g.strip() for g in up_genes if str(g).strip()]
+        down_genes = [g.strip() for g in down_genes if str(g).strip()]
         if not up_genes and not down_genes:
             msg = ("Please provide up-regulated and/or down-regulated gene symbols "
                    "(e.g., 'Up: COL1A1 COL3A1 FN1 TGFB1; Down: NPHS1 NPHS2 PPARA').")
@@ -399,12 +403,16 @@ def run_agent(text: str, use_llm: bool, tools: dict) -> dict:
                     "Up: COL1A1 COL3A1 FN1 TGFB1 SERPINE1 LCN2 HAVCR1; Down: NPHS1 NPHS2 PODXL PPARA PPARGC1A CPT1A. Approved drugs only, low nephrotoxicity risk",
                 ],
             )
+        filters = dict(params.get("filters") or {})
+        for fk in ("approved_only", "max_diki_tier", "collapse_scaffold"):
+            if params.get(fk) is not None and fk not in filters:
+                filters[fk] = params[fk]
         resolved = {
             "up_genes": up_genes,
             "down_genes": down_genes,
             "context": params.get("context") or "kprl",
             "kidney_compartment": params.get("kidney_compartment"),
-            "filters": params.get("filters") or {},
+            "filters": filters,
         }
         steps.append({
             "name": "Resolve parameters", "tool": "signature_parser", "status": "done",

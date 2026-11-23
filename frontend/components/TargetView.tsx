@@ -1,8 +1,9 @@
 "use client";
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
-import Chart from "@/components/Chart";
+import { HorizontalBarChart } from "@/components/Chart";
 import { useAgent } from "@/components/AgentContext";
+import { apiJson } from "@/lib/api";
 
 const LABELS: Record<string, string> = {
   sc_pt: "Proximal tubule (PT)",
@@ -26,34 +27,16 @@ export default function TargetView({ symbol }: { symbol: string }) {
     if (!symbol) return;
     setData(null);
     setError("");
-    fetch(`/api/v1/target/${encodeURIComponent(symbol)}`)
-      .then(async (r) => {
-        const body = await r.json();
-        if (!r.ok) throw new Error(body.detail || "not found");
-        setData(body);
-      })
+    apiJson(`/api/v1/target/${encodeURIComponent(symbol)}`)
+      .then(setData)
       .catch((e) => setError(String(e.message || e)));
   }, [symbol]);
 
-  const chart = useMemo(() => {
-    if (!data?.kidney_expression) return null;
-    const entries = Object.entries(data.kidney_expression).filter(
-      ([k, v]) => LABELS[k] && v != null
-    );
-    if (!entries.length) return null;
-    return {
-      tooltip: { trigger: "axis" },
-      grid: { left: 175, right: 24, top: 12, bottom: 24 },
-      xAxis: { type: "value" },
-      yAxis: { type: "category", data: entries.map(([k]) => LABELS[k]) },
-      series: [
-        {
-          type: "bar",
-          data: entries.map(([, v]) => v),
-          itemStyle: { color: "#14b8a6", borderRadius: [0, 4, 4, 0] },
-        },
-      ],
-    };
+  const exprItems = useMemo(() => {
+    if (!data?.kidney_expression) return [];
+    return Object.entries(data.kidney_expression)
+      .filter(([k, v]) => LABELS[k] && v != null)
+      .map(([k, v]) => ({ label: LABELS[k], value: Number(v) || 0 }));
   }, [data]);
 
   if (error) return <div className="card">Gene not found: {error}</div>;
@@ -87,8 +70,8 @@ export default function TargetView({ symbol }: { symbol: string }) {
       <div className="grid cols-2">
         <div className="card">
           <h2>Kidney compartment expression</h2>
-          {chart ? (
-            <Chart option={chart} height={360} />
+          {exprItems.length > 0 ? (
+            <HorizontalBarChart items={exprItems} color="#14b8a6" height={320} />
           ) : (
             <div className="muted small">No expression data available</div>
           )}
@@ -109,7 +92,10 @@ export default function TargetView({ symbol }: { symbol: string }) {
                   {data.targeting_drugs.map((d: any) => (
                     <tr key={d.pert_id}>
                       <td>
-                        <Link href={`/compound/?id=${encodeURIComponent(d.pert_id)}`}>
+                        <Link
+                          href={`/compound/?id=${encodeURIComponent(d.pert_id)}`}
+                          prefetch={false}
+                        >
                           {d.pert_iname || d.pert_id}
                         </Link>
                         <div className="small muted mono">{d.pert_id}</div>
@@ -171,7 +157,10 @@ export default function TargetView({ symbol }: { symbol: string }) {
                   <tr key={c.pert_id}>
                     <td className="mono muted">{i + 1}</td>
                     <td>
-                      <Link href={`/compound/?id=${encodeURIComponent(c.pert_id)}`}>
+                      <Link
+                        href={`/compound/?id=${encodeURIComponent(c.pert_id)}`}
+                        prefetch={false}
+                      >
                         {c.pert_iname || c.pert_id}
                       </Link>
                     </td>

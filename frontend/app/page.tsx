@@ -171,6 +171,7 @@ export default function Home() {
             <Link
               key={href}
               href={href}
+              prefetch={false}
               style={{
                 display: "block",
                 padding: 12,

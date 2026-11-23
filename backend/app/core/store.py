@@ -35,8 +35,13 @@ def trim_memory():
 
 def _parse_npy_header(path: Path):
     with open(path, "rb") as fh:
-        ver = npf.read_magic(fh)
-        shape, fortran, dtype = npf._read_array_header(fh, ver)
+        major, minor = npf.read_magic(fh)
+        if (major, minor) == (1, 0):
+            shape, fortran, dtype = npf.read_array_header_1_0(fh)
+        elif major >= 2:
+            shape, fortran, dtype = npf.read_array_header_2_0(fh)
+        else:
+            raise ValueError(f"Unsupported .npy version {(major, minor)}: {path}")
         offset = fh.tell()
     if fortran:
         raise ValueError(f"Fortran-order array unsupported for row reads: {path}")

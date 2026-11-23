@@ -1,13 +1,15 @@
 "use client";
 import { useEffect, useState } from "react";
+import { apiJson } from "@/lib/api";
 
 export default function DownloadsPage() {
   const [items, setItems] = useState<any[]>([]);
+  const [error, setError] = useState("");
+
   useEffect(() => {
-    fetch("/api/v1/downloads")
-      .then((r) => r.json())
+    apiJson("/api/v1/downloads")
       .then((d) => setItems(d.downloads || []))
-      .catch(() => {});
+      .catch((e) => setError(String(e.message || e)));
   }, []);
 
   return (
@@ -18,6 +20,14 @@ export default function DownloadsPage() {
       <div className="sub">
         Standardized GMT signature sets with SHA256 checksums and matrix provenance metadata.
       </div>
+      {error && (
+        <div
+          className="card"
+          style={{ marginBottom: 16, color: "var(--bad)", borderColor: "#fca5a5" }}
+        >
+          Failed to load download manifest: {error}
+        </div>
+      )}
       <div className="card">
         <table>
           <thead>

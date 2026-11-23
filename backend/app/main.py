@@ -16,6 +16,8 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field
+from starlette.datastructures import MutableHeaders
+from starlette.middleware.gzip import GZipMiddleware
 from starlette.routing import Route
 
 from .agent import route as agent_route, summarize as agent_summarize
@@ -40,7 +42,43 @@ async def lifespan(app: FastAPI):
         yield
 
 
-app = FastAPI(title="NephroPerturb API", version="1.1.0", lifespan=lifespan)
+class _SelectiveGZipAndCacheMiddleware:
+    """Compress API/HTML/CSS/JS/SVG while bypassing /mcp streams & .gz downloads."""
+
+    def __init__(self, app):
+        self.app = app
+        self.gzip_app = GZipMiddleware(app, minimum_size=512)
+
+    async def __call__(self, scope, receive, send):
+        if scope["type"] != "http":
+            await self.app(scope, receive, send)
+            return
+        path = scope.get("path", "")
+        if path == "/mcp" or path.startswith("/mcp/") or (
+            path.startswith("/downloads/") and path != "/downloads/"
+        ):
+            await self.app(scope, receive, send)
+            return
+        method = scope.get("method", "GET")
+
+        async def send_with_cache(message):
+            if message["type"] == "http.response.start" and method == "GET":
+                headers = MutableHeaders(scope=message)
+                if "cache-control" not in headers:
+                    ctype = headers.get("content-type", "")
+                    if path.startswith("/_next/static/"):
+                        headers["cache-control"] = "public, max-age=31536000, immutable"
+                    elif path.endswith(".svg"):
+                        headers["cache-control"] = "public, max-age=86400"
+                    elif "text/html" in ctype:
+                        headers["cache-control"] = "no-cache"
+            await send(message)
+
+        await self.gzip_app(scope, receive, send_with_cache)
+
+
+app = FastAPI(title="NephroPerturb API", version="1.1.1", lifespan=lifespan)
+app.add_middleware(_SelectiveGZipAndCacheMiddleware)
 app.add_middleware(CORSMiddleware, allow_origins=["*"], allow_methods=["*"],
                    allow_headers=["*"])
 
@@ -107,7 +145,7 @@ class SummarizeRequest(BaseModel):
 def health():
     store = get_store()
     return {"status": "ok",
-            "version": "1.1.0",
+            "version": "1.1.1",
             "mode": "lite" if store.is_lite else "full",
             "mcp_mounted": _MOUNT_MCP,
             "compounds": int(len(store.cp_index)),

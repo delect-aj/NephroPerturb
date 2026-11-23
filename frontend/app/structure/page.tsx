@@ -2,7 +2,9 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import Structure from "@/components/Structure";
+import { TanimotoBar } from "@/components/Badges";
 import { useAgent } from "@/components/AgentContext";
+import { apiJson } from "@/lib/api";
 import { STRUCTURE_PRESETS } from "@/lib/examples";
 
 function isSmilesInput(q: string) {
@@ -33,26 +35,22 @@ export default function StructureSearchPage() {
       let body: any;
       if (isSmilesInput(clean)) {
         setQuerySmiles(clean);
-        setResolvedLabel(`SMILES query`);
+        setResolvedLabel("SMILES query");
         body = { smiles: clean, top_k: 20 };
       } else {
         setQuerySmiles(null);
-        const cr = await fetch(`/api/v1/compound/${encodeURIComponent(clean)}`);
-        const cBody = await cr.json();
-        if (!cr.ok) throw new Error(cBody.detail || `Compound '${clean}' not found`);
+        const cBody = await apiJson(`/api/v1/compound/${encodeURIComponent(clean)}`);
         const pid = cBody.compound?.pert_id || clean;
         const pname = cBody.compound?.pert_iname || pid;
         setResolvedLabel(`${pname} (${pid})`);
         body = { pert_id: pid, top_k: 20 };
       }
 
-      const res = await fetch("/api/v1/similarity/structure", {
+      const payload = await apiJson("/api/v1/similarity/structure", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(body),
       });
-      const payload = await res.json();
-      if (!res.ok) throw new Error(payload.detail || "Structure search failed");
       setResults(payload.results || []);
     } catch (e: any) {
       setError(String(e.message || e));
@@ -147,31 +145,25 @@ export default function StructureSearchPage() {
                 </tr>
               </thead>
               <tbody>
-                {results.map((r: any, i: number) => {
-                  const sim = Number(r.tanimoto || 0);
-                  const pct = Math.max(0, Math.min(100, Math.round(sim * 100)));
-                  return (
-                    <tr key={r.pert_id}>
-                      <td className="mono muted">{i + 1}</td>
-                      <td>
-                        <Link href={`/compound/?id=${encodeURIComponent(r.pert_id)}`}>
-                          {r.pert_iname || r.pert_id}
-                        </Link>
-                        <div className="small muted mono">{r.pert_id}</div>
-                      </td>
-                      <td>
-                        <div className="tanimoto-wrap">
-                          <span className="mono">{sim.toFixed(3)}</span>
-                          <div className="tanimoto-bar">
-                            <div className="tanimoto-fill" style={{ width: `${pct}%` }} />
-                          </div>
-                        </div>
-                      </td>
-                      <td className="small">{r.moa || "—"}</td>
-                      <td className="small">{r.clinical_phase || "—"}</td>
-                    </tr>
-                  );
-                })}
+                {results.map((r: any, i: number) => (
+                  <tr key={r.pert_id}>
+                    <td className="mono muted">{i + 1}</td>
+                    <td>
+                      <Link
+                        href={`/compound/?id=${encodeURIComponent(r.pert_id)}`}
+                        prefetch={false}
+                      >
+                        {r.pert_iname || r.pert_id}
+                      </Link>
+                      <div className="small muted mono">{r.pert_id}</div>
+                    </td>
+                    <td>
+                      <TanimotoBar value={r.tanimoto} />
+                    </td>
+                    <td className="small">{r.moa || "—"}</td>
+                    <td className="small">{r.clinical_phase || "—"}</td>
+                  </tr>
+                ))}
               </tbody>
             </table>
           </div>

@@ -1,6 +1,7 @@
 "use client";
 import React, { createContext, useCallback, useContext, useState } from "react";
 import { usePathname } from "next/navigation";
+import { apiJson } from "@/lib/api";
 
 interface AgentCtxValue {
   prompt: string;
@@ -52,13 +53,15 @@ export function AgentProvider({ children }: { children: React.ReactNode }) {
       setLoading(true);
       setError("");
       try {
-        const res = await fetch("/api/v1/agent/run", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ text: q, use_llm: useLLM }),
-        });
-        const body = await res.json();
-        if (!res.ok) throw new Error(body.detail || "Agent execution failed");
+        const body = await apiJson(
+          "/api/v1/agent/run",
+          {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ text: q, use_llm: useLLM }),
+          },
+          45000
+        );
         setResult(body);
       } catch (err: any) {
         setError(String(err?.message || err));

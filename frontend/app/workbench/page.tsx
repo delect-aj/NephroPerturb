@@ -1,8 +1,10 @@
 "use client";
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
-import Chart from "@/components/Chart";
+import { RadarChart } from "@/components/Chart";
+import { DikiBadge, DirilBadge } from "@/components/Badges";
 import { useAgent } from "@/components/AgentContext";
+import { apiJson } from "@/lib/api";
 import { SIGNATURE_PRESETS } from "@/lib/examples";
 
 const COMPARTMENTS: [string, string][] = [
@@ -17,12 +19,6 @@ const COMPARTMENTS: [string, string][] = [
   ["immune", "Immune"],
   ["tubule", "Tubule"],
 ];
-
-function tierBadge(tier?: string | null) {
-  if (!tier) return <span className="badge grey">NA</span>;
-  const cls = tier === "High" ? "red" : tier === "Moderate" ? "amber" : "green";
-  return <span className={`badge ${cls}`}>{tier}</span>;
-}
 
 export default function Workbench() {
   const { fill } = useAgent();
@@ -61,26 +57,28 @@ export default function Workbench() {
     setError("");
     setSelected(null);
     try {
-      const res = await fetch("/api/v1/query/signature", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          up_genes: parseGenes(up),
-          down_genes: parseGenes(down),
-          context,
-          gene_tier: tier,
-          kidney_compartment: compartment,
-          weights: { w1, w2, w3, w4 },
-          filters: {
-            approved_only: approvedOnly,
-            collapse_scaffold: collapse,
-            ...(maxDiki ? { max_diki_tier: maxDiki } : {}),
-          },
-          top_k: 50,
-        }),
-      });
-      const payload = await res.json();
-      if (!res.ok) throw new Error(payload.detail || "query failed");
+      const payload = await apiJson(
+        "/api/v1/query/signature",
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            up_genes: parseGenes(up),
+            down_genes: parseGenes(down),
+            context,
+            gene_tier: tier,
+            kidney_compartment: compartment,
+            weights: { w1, w2, w3, w4 },
+            filters: {
+              approved_only: approvedOnly,
+              collapse_scaffold: collapse,
+              ...(maxDiki ? { max_diki_tier: maxDiki } : {}),
+            },
+            top_k: 50,
+          }),
+        },
+        45000
+      );
       setData(payload);
       setSelected(payload.results?.[0] || null);
     } catch (err: any) {
@@ -101,33 +99,14 @@ export default function Workbench() {
     URL.revokeObjectURL(url);
   }
 
-  const radar = useMemo(() => {
-    if (!selected) return null;
-    const vals = ["xsum", "zhang", "wtcs", "func"].map((m) =>
-      Math.abs(Number(selected[`tau_${m}`] || 0))
-    );
-    return {
-      radar: {
-        indicator: ["XSum", "Zhang", "WTCS", "Func"].map((name) => ({ name, max: 100 })),
-        radius: "62%",
-        splitNumber: 4,
-      },
-      series: [
-        {
-          type: "radar",
-          data: [
-            {
-              value: vals,
-              name: selected.pert_iname || selected.pert_id,
-              areaStyle: { opacity: 0.25, color: "#14b8a6" },
-              lineStyle: { color: "#2563eb", width: 2 },
-              itemStyle: { color: "#2563eb" },
-            },
-          ],
-        },
-      ],
-      tooltip: {},
-    };
+  const radarItems = useMemo(() => {
+    if (!selected) return [];
+    return [
+      { label: "XSum", value: Math.abs(Number(selected.tau_xsum || 0)) },
+      { label: "Zhang", value: Math.abs(Number(selected.tau_zhang || 0)) },
+      { label: "WTCS", value: Math.abs(Number(selected.tau_wtcs || 0)) },
+      { label: "Func", value: Math.abs(Number(selected.tau_func || 0)) },
+    ];
   }, [selected]);
 
   return (
@@ -313,6 +292,7 @@ export default function Workbench() {
                     <td>
                       <Link
                         href={`/compound/?id=${encodeURIComponent(r.pert_id)}`}
+                        prefetch={false}
                         onClick={(e) => e.stopPropagation()}
                       >
                         {r.pert_iname || r.pert_id}
@@ -327,16 +307,8 @@ export default function Workbench() {
                         {Number(r[`tau_${m}`] || 0).toFixed(0)}
                       </td>
                     ))}
-                    <td>{tierBadge(r.tdiki_tier)}</td>
-                    <td>
-                      {r.diril_label === 1 ? (
-                        <span className="badge red">Positive</span>
-                      ) : r.diril_label === 0 ? (
-                        <span className="badge green">Negative</span>
-                      ) : (
-                        <span className="badge grey">—</span>
-                      )}
-                    </td>
+                    <td><DikiBadge tier={r.tdiki_tier} /></td>
+                    <td><DirilBadge value={r.diril_label} /></td>
                     <td className="small">{r.moa ? String(r.moa).split("|")[0] : "—"}</td>
                   </tr>
                 ))}
@@ -346,11 +318,11 @@ export default function Workbench() {
         </div>
       )}
 
-      {selected && radar && (
+      {selected && radarItems.length > 0 && (
         <div className="grid cols-2" style={{ marginTop: 16 }}>
           <div className="card">
             <h2>Component τ Profile · {selected.pert_iname || selected.pert_id}</h2>
-            <Chart option={radar} />
+            <RadarChart items={radarItems} />
           </div>
           <div className="card">
             <h2>Query Provenance</h2>

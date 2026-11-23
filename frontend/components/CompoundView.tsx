@@ -1,9 +1,11 @@
 "use client";
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
-import Chart from "@/components/Chart";
+import { HorizontalBarChart } from "@/components/Chart";
 import Structure from "@/components/Structure";
+import { DikiBadge, DirilBadge } from "@/components/Badges";
 import { useAgent } from "@/components/AgentContext";
+import { apiJson } from "@/lib/api";
 
 function fmt(v: any) {
   return v == null ? "—" : Number(v).toFixed(1);
@@ -20,42 +22,29 @@ export default function CompoundView({ id }: { id: string }) {
     setData(null);
     setExplain(null);
     setError("");
-    fetch(`/api/v1/compound/${encodeURIComponent(id)}`)
-      .then(async (r) => {
-        const body = await r.json();
-        if (!r.ok) throw new Error(body.detail || "not found");
-        setData(body);
-      })
+    apiJson(`/api/v1/compound/${encodeURIComponent(id)}`)
+      .then(setData)
       .catch((e) => setError(String(e.message || e)));
-    fetch(`/api/v1/compound/${encodeURIComponent(id)}/explain`)
-      .then((r) => r.json())
+    apiJson(`/api/v1/compound/${encodeURIComponent(id)}/explain`)
       .then(setExplain)
       .catch(() => {});
   }, [id]);
 
-  const funcChart = useMemo(() => {
-    if (!data?.functional_activity?.renal_modules) return null;
-    const entries = Object.entries(data.functional_activity.renal_modules);
-    return {
-      tooltip: { trigger: "axis" },
-      grid: { left: 140, right: 24, top: 12, bottom: 24 },
-      xAxis: { type: "value" },
-      yAxis: { type: "category", data: entries.map(([k]) => k).reverse() },
-      series: [
-        {
-          type: "bar",
-          data: entries.map(([, v]) => v).reverse(),
-          itemStyle: { color: "#2563eb", borderRadius: [0, 4, 4, 0] },
-        },
-      ],
-    };
+  const moduleItems = useMemo(() => {
+    if (!data?.functional_activity?.renal_modules) return [];
+    return Object.entries(data.functional_activity.renal_modules).map(
+      ([label, value]) => ({ label, value: Number(value) || 0 })
+    );
   }, [data]);
 
   if (!id) {
     return (
       <div className="card">
         Provide a compound name, BRD ID, or InChIKey (e.g.,{" "}
-        <Link href="/compound/?id=dexamethasone">dexamethasone</Link>).
+        <Link href="/compound/?id=dexamethasone" prefetch={false}>
+          dexamethasone
+        </Link>
+        ).
       </div>
     );
   }
@@ -78,7 +67,7 @@ export default function CompoundView({ id }: { id: string }) {
         <span className="badge grey mono">{c.pert_id}</span>
         {c.clinical_phase && <span className="badge green">{c.clinical_phase}</span>}
         <span className="spacer" />
-        <Link href={`/structure/?q=${encodeURIComponent(c.pert_id)}`}>
+        <Link href={`/structure/?q=${encodeURIComponent(c.pert_id)}`} prefetch={false}>
           <button type="button" className="ghost mini">
             Find structural analogs →
           </button>
@@ -136,29 +125,11 @@ export default function CompoundView({ id }: { id: string }) {
             </div>
             <div>T-DIKI tier</div>
             <div>
-              <span
-                className={`badge ${
-                  data.tdiki?.tier === "High"
-                    ? "red"
-                    : data.tdiki?.tier === "Moderate"
-                    ? "amber"
-                    : data.tdiki?.tier === "Low"
-                    ? "green"
-                    : "grey"
-                }`}
-              >
-                {data.tdiki?.tier || "NA"}
-              </span>
+              <DikiBadge tier={data.tdiki?.tier} />
             </div>
             <div>DIRIL gold standard</div>
             <div>
-              {data.tdiki?.diril_label === 1 ? (
-                <span className="badge red">Nephrotoxic</span>
-              ) : data.tdiki?.diril_label === 0 ? (
-                <span className="badge green">Non-nephrotoxic</span>
-              ) : (
-                <span className="badge grey">Not curated</span>
-              )}
+              <DirilBadge value={data.tdiki?.diril_label} />
             </div>
           </div>
           {explain?.contributions?.length ? (
@@ -189,6 +160,7 @@ export default function CompoundView({ id }: { id: string }) {
             {(data.scaffold_siblings || []).slice(0, 12).map((p: string) => (
               <Link
                 key={p}
+                prefetch={false}
                 className="badge grey mono"
                 href={`/compound/?id=${encodeURIComponent(p)}`}
               >
@@ -214,7 +186,7 @@ export default function CompoundView({ id }: { id: string }) {
                 {data.top_up_genes.map((g: any) => (
                   <tr key={g.symbol}>
                     <td>
-                      <Link href={`/target/?symbol=${encodeURIComponent(g.symbol)}`}>
+                      <Link href={`/target/?symbol=${encodeURIComponent(g.symbol)}`} prefetch={false}>
                         {g.symbol}
                       </Link>
                     </td>
@@ -234,7 +206,7 @@ export default function CompoundView({ id }: { id: string }) {
                 {data.top_down_genes.map((g: any) => (
                   <tr key={g.symbol}>
                     <td>
-                      <Link href={`/target/?symbol=${encodeURIComponent(g.symbol)}`}>
+                      <Link href={`/target/?symbol=${encodeURIComponent(g.symbol)}`} prefetch={false}>
                         {g.symbol}
                       </Link>
                     </td>
@@ -248,8 +220,8 @@ export default function CompoundView({ id }: { id: string }) {
 
         <div className="card">
           <h2>Renal pathology module activity</h2>
-          {funcChart ? (
-            <Chart option={funcChart} height={360} />
+          {moduleItems.length > 0 ? (
+            <HorizontalBarChart items={moduleItems} height={320} />
           ) : (
             <div className="muted small">No functional matrix available</div>
           )}
@@ -280,7 +252,10 @@ export default function CompoundView({ id }: { id: string }) {
                 {data.targets.map((t: any) => (
                   <tr key={t.target_symbol}>
                     <td>
-                      <Link href={`/target/?symbol=${encodeURIComponent(t.target_symbol)}`}>
+                      <Link
+                        href={`/target/?symbol=${encodeURIComponent(t.target_symbol)}`}
+                        prefetch={false}
+                      >
                         {t.target_symbol}
                       </Link>
                     </td>

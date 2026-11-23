@@ -1,20 +1,6 @@
 "use client";
 import Link from "next/link";
-
-function dikiBadge(tier?: string) {
-  if (!tier || tier === "NA") return <span className="badge grey">NA</span>;
-  const cls = tier === "High" ? "red" : tier === "Moderate" ? "amber" : "green";
-  return <span className={`badge ${cls}`}>{tier}</span>;
-}
-
-function dirilBadge(label?: string) {
-  if (!label || label === "—") return <span className="badge grey">—</span>;
-  return (
-    <span className={`badge ${label === "Positive" ? "red" : "green"}`}>
-      {label}
-    </span>
-  );
-}
+import { DikiBadge, DirilBadge, TanimotoBar } from "@/components/Badges";
 
 export default function AgentResult({
   result,
@@ -75,7 +61,11 @@ export default function AgentResult({
                 <span className="spacer" />
                 {s.ms != null && <span className="small muted mono">{s.ms} ms</span>}
               </div>
-              {s.detail && <div className="small muted" style={{ marginTop: 3 }}>{s.detail}</div>}
+              {s.detail && (
+                <div className="small muted" style={{ marginTop: 3 }}>
+                  {s.detail}
+                </div>
+              )}
             </div>
           ))}
         </div>
@@ -123,7 +113,10 @@ export default function AgentResult({
                     if (c.key === "compound" && r.pert_id) {
                       return (
                         <td key={c.key}>
-                          <Link href={`/compound/?id=${encodeURIComponent(r.pert_id)}`}>
+                          <Link
+                            href={`/compound/?id=${encodeURIComponent(r.pert_id)}`}
+                            prefetch={false}
+                          >
                             {val}
                           </Link>
                           {!compact && r.pert_id && (
@@ -132,8 +125,8 @@ export default function AgentResult({
                         </td>
                       );
                     }
-                    if (c.key === "tdiki") return <td key={c.key}>{dikiBadge(val)}</td>;
-                    if (c.key === "diril") return <td key={c.key}>{dirilBadge(val)}</td>;
+                    if (c.key === "tdiki") return <td key={c.key}><DikiBadge tier={val} /></td>;
+                    if (c.key === "diril") return <td key={c.key}><DirilBadge value={val} /></td>;
                     if (c.key === "direction") {
                       return (
                         <td key={c.key}>
@@ -143,16 +136,10 @@ export default function AgentResult({
                         </td>
                       );
                     }
-                    if (c.key === "tanimoto" && val != null && !Number.isNaN(Number(val))) {
-                      const pct = Math.max(0, Math.min(100, Math.round(Number(val) * 100)));
+                    if (c.key === "tanimoto") {
                       return (
                         <td key={c.key}>
-                          <div className="tanimoto-wrap">
-                            <span className="mono">{val}</span>
-                            <div className="tanimoto-bar">
-                              <div className="tanimoto-fill" style={{ width: `${pct}%` }} />
-                            </div>
-                          </div>
+                          <TanimotoBar value={val} />
                         </td>
                       );
                     }
@@ -187,7 +174,7 @@ export default function AgentResult({
 
       <div className="row" style={{ marginTop: 12, gap: 8 }}>
         {links.map((lk: any) => (
-          <Link key={lk.href} href={lk.href}>
+          <Link key={lk.href} href={lk.href} prefetch={false}>
             <button type="button" className="ghost mini">
               {lk.label} →
             </button>

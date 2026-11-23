@@ -1,7 +1,9 @@
 "use client";
 import { useEffect, useState } from "react";
 import Link from "next/link";
+import { DikiBadge } from "@/components/Badges";
 import { useAgent } from "@/components/AgentContext";
+import { apiJson } from "@/lib/api";
 import { PATHWAY_PRESETS } from "@/lib/examples";
 
 export default function PathwayTF() {
@@ -33,13 +35,11 @@ export default function PathwayTF() {
       useRows.forEach((r) => {
         if (r.name.trim()) targets[r.name.trim()] = r.dir;
       });
-      const res = await fetch("/api/v1/query/pathway-tf", {
+      const body = await apiJson("/api/v1/query/pathway-tf", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ targets, top_k: 30 }),
       });
-      const body = await res.json();
-      if (!res.ok) throw new Error(body.detail || "query failed");
       setData(body);
     } catch (e: any) {
       setError(String(e.message || e));
@@ -168,26 +168,17 @@ export default function PathwayTF() {
                   <tr key={r.pert_id}>
                     <td className="mono muted">{i + 1}</td>
                     <td>
-                      <Link href={`/compound/?id=${encodeURIComponent(r.pert_id)}`}>
+                      <Link
+                        href={`/compound/?id=${encodeURIComponent(r.pert_id)}`}
+                        prefetch={false}
+                      >
                         {r.pert_iname || r.pert_id}
                       </Link>
                       <div className="small muted mono">{r.pert_id}</div>
                     </td>
                     <td className="mono">{Number(r.pathway_tf_score).toFixed(2)}</td>
                     <td className="small">{r.clinical_phase || "—"}</td>
-                    <td>
-                      <span
-                        className={`badge ${
-                          r.tdiki_tier === "High"
-                            ? "red"
-                            : r.tdiki_tier === "Moderate"
-                            ? "amber"
-                            : "green"
-                        }`}
-                      >
-                        {r.tdiki_tier || "NA"}
-                      </span>
-                    </td>
+                    <td><DikiBadge tier={r.tdiki_tier} /></td>
                   </tr>
                 ))}
               </tbody>

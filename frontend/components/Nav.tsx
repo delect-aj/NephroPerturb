@@ -2,6 +2,7 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { apiJson } from "@/lib/api";
 
 function Icon({ name }: { name: string }) {
   const p = {
@@ -99,8 +100,7 @@ export default function Nav() {
   const [offline, setOffline] = useState(false);
 
   useEffect(() => {
-    fetch("/health")
-      .then((r) => (r.ok ? r.json() : Promise.reject()))
+    apiJson("/health", undefined, 10000)
       .then(setHealth)
       .catch(() => setOffline(true));
   }, []);
@@ -127,7 +127,12 @@ export default function Nav() {
       </div>
       <nav className="nav">
         {LINKS.map(([href, label, icon]) => (
-          <Link key={href} href={href} className={active(href) ? "active" : ""}>
+          <Link
+            key={href}
+            href={href}
+            prefetch={false}
+            className={active(href) ? "active" : ""}
+          >
             <Icon name={icon} />
             <span>{label}</span>
           </Link>
