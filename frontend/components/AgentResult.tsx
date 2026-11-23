@@ -75,6 +75,18 @@ function buildDossierMarkdown(turn: AgentTurn): string {
     });
     lines.push("");
   }
+  const refs = turn.references || [];
+  if (refs.length) {
+    lines.push(`## References`);
+    refs.forEach((r: any) => {
+      if (r.kind === "paper") {
+        lines.push(`${r.index}. ${r.authors || "et al."} (${r.year || "—"}). **${r.title}**. *${r.journal || "PubMed"}*. ${r.id} (${r.url})`);
+      } else {
+        lines.push(`${r.index}. ClinicalTrials.gov (${(r.phases || ["N/A"]).join("/")}, ${r.status}). **${r.title}**. ${r.id} (${r.url})`);
+      }
+    });
+    lines.push("");
+  }
   return lines.join("\n");
 }
 
@@ -111,6 +123,7 @@ export default function AgentResult({
   const totalPapers = lits.reduce((acc: number, g: any) => acc + (g.papers?.length || 0), 0);
   const trialsGroups = result.clinical_trials || [];
   const totalTrials = trialsGroups.reduce((acc: number, g: any) => acc + (g.trials?.length || 0), 0);
+  const references = result.references || [];
   const comparison = result.comparison;
   const links = result.links || [];
   const suggestions = result.suggestions || [];
@@ -122,7 +135,8 @@ export default function AgentResult({
   const hasTrials = totalTrials > 0;
 
   const [tab, setTab] = useState<"candidates" | "compare" | "literature" | "trials">("candidates");
-  const [traceOpen, setTraceOpen] = useState<boolean>(true);
+  const [traceOpen, setTraceOpen] = useState<boolean>(result.status === "streaming");
+  const [copied, setCopied] = useState<boolean>(false);
 
   useEffect(() => {
     if (hasCompare) setTab("compare");
@@ -132,12 +146,16 @@ export default function AgentResult({
   }, [result.id, hasCompare, hasCandidates, hasLit, hasTrials]);
 
   useEffect(() => {
-    if (result.status !== "streaming" && steps.length > 4 && compact) {
-      setTraceOpen(false);
-    } else if (result.status === "streaming") {
-      setTraceOpen(true);
-    }
-  }, [result.status, steps.length, compact]);
+    setTraceOpen(result.status === "streaming");
+  }, [result.status]);
+
+  const copyReport = () => {
+    if (!result.summary) return;
+    navigator.clipboard?.writeText(buildDossierMarkdown(result)).then(() => {
+      setCopied(true);
+      setTimeout(() => setCopied(false), 1800);
+    }).catch(() => {});
+  };
 
   const statusLabel: Record<string, string> = {
     streaming: "Researching...",
@@ -204,16 +222,6 @@ export default function AgentResult({
         {result.elapsed_ms != null && (
           <span className="small muted mono">{result.elapsed_ms} ms</span>
         )}
-        {!compact && result.status !== "streaming" && result.summary && (
-          <button
-            type="button"
-            className="ghost mini"
-            onClick={() => downloadMarkdown(result)}
-            title="Download traceable Markdown research dossier"
-          >
-            Export .md
-          </button>
-        )}
       </div>
 
       {result.quota_notice && (
@@ -268,16 +276,68 @@ export default function AgentResult({
         </div>
       )}
 
-      {/* Grounded Research Synthesis */}
+      {/* Publication-Grade Research Synthesis Report */}
       {result.summary && (
-        <div className="summary-box" style={{ marginTop: 8 }}>
+        <div className="report-card">
+          <div className="report-head">
+            <span style={{ fontWeight: 700, fontSize: 13 }}>Research Synthesis Report</span>
+            <span className="small muted">
+              {references.length > 0 ? `${references.length} grounded reference${references.length > 1 ? "s" : ""}` : "Grounded synthesis"}
+            </span>
+            <span className="spacer" />
+            {!compact && result.status !== "streaming" && (
+              <>
+                <button type="button" className="ghost mini" onClick={copyReport}>
+                  {copied ? "Copied" : "Copy"}
+                </button>
+                <button type="button" className="ghost mini" onClick={() => downloadMarkdown(result)}>
+                  Export .md
+                </button>
+              </>
+            )}
+          </div>
           <CitationText text={result.summary} />
+
+          {references.length > 0 && (
+            <div className="ref-section">
+              <div className="ref-title">References ({references.length})</div>
+              <ol className="ref-list">
+                {references.map((r: any) => (
+                  <li key={r.id} className="ref-item">
+                    {r.kind === "paper" ? (
+                      <>
+                        <span className="muted">{r.authors || "et al."} ({r.year || "—"}). </span>
+                        <a href={r.url} target="_blank" rel="noopener noreferrer" style={{ fontWeight: 600 }}>
+                          {r.title}
+                        </a>
+                        {r.journal && <span className="muted"> — <em>{r.journal}</em>.</span>}{" "}
+                        <a href={r.url} target="_blank" rel="noopener noreferrer" className="cite-chip cite-pmid">
+                          {r.id}
+                        </a>
+                      </>
+                    ) : (
+                      <>
+                        <span className="muted">ClinicalTrials.gov ({(r.phases || ["N/A"]).join("/")}, {r.status}). </span>
+                        <a href={r.url} target="_blank" rel="noopener noreferrer" style={{ fontWeight: 600 }}>
+                          {r.title}
+                        </a>{" "}
+                        <a href={r.url} target="_blank" rel="noopener noreferrer" className="cite-chip cite-nct">
+                          {r.id}
+                        </a>
+                      </>
+                    )}
+                  </li>
+                ))}
+              </ol>
+            </div>
+          )}
         </div>
       )}
 
       {/* Evidence Tabs */}
       {(hasCandidates || hasCompare || hasLit || hasTrials) && (
         <div className="tab-bar">
+          <span className="small muted" style={{ alignSelf: "center", marginRight: 4 }}>Supporting Evidence:</span>
           {hasCompare && (
             <button
               type="button"

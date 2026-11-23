@@ -12,12 +12,12 @@ class ModelExecutionPolicy:
     top_p: float = 1.0
     seed: int = 42
     max_steps_ceiling: int = 6
-    max_tokens_step: int = 1200
-    max_tokens_synthesis: int = 1200
-    max_tokens_repair: int = 1000
-    max_prompt_tokens: int = 15000
+    max_tokens_step: int = 1400
+    max_tokens_synthesis: int = 1400
+    max_tokens_repair: int = 1100
+    max_prompt_tokens: int = 16000
     max_wall_seconds: float = 45.0
-    tool_digest_max_chars: int = 1250
+    tool_digest_max_chars: int = 2100
     allow_llm_calls: bool = True
 
     def as_public_dict(self) -> dict:
@@ -137,7 +137,9 @@ def build_system_prompt(skill, session_state: dict | None, include_literature: b
         f"- NEVER invent PMIDs, NCT IDs, BRD IDs, compound names, or numeric scores.\n"
         f"- Resolve ordinal references (#1, #2, top 2, first/second) using the Session Ledger below.\n"
         f"- Batch independent tool calls in a single turn when possible (e.g., profile_compound + explain_tdiki, or search_literature + search_clinical_trials) to minimize latency and tokens.\n"
-        f"- MUST follow the Skill's exact `###` numbered headings verbatim and ALWAYS synthesize paper `takeaway` findings cleanly (never omit the Literature & Clinical Synthesis section when literature tools ran).\n"
-        f"- Keep output concise (target ~180-280 words total) and strictly English markdown.\n\n"
+        f"- MUST follow the Skill's exact `###` numbered headings verbatim.\n"
+        f"- Write logical, cohesive scientific prose paragraphs connecting computational, mechanistic, safety, and literature findings (avoid choppy key-value bullet dumps). Synthesize across paper `takeaway`s with inline `[PMID:<digits>]` and `[NCT<8-digits>]` citations.\n"
+        f"- Do NOT append a manual References bibliography; the system automatically generates a verified References section from your inline citations.\n"
+        f"- Keep output focused (~240-360 words total) and strictly English markdown.\n\n"
         f"SESSION LEDGER:\n{ledger}"
     )

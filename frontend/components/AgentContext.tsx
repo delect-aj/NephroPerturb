@@ -66,6 +66,7 @@ export interface AgentTurn {
   comparison?: any;
   literature: any[];
   clinical_trials: any[];
+  references?: any[];
   links: Array<{ label: string; href: string }>;
   summary: string;
   verification?: any;
@@ -227,6 +228,7 @@ export function AgentProvider({ children }: { children: React.ReactNode }) {
         table: { columns: [], rows: [] },
         literature: [],
         clinical_trials: [],
+        references: [],
         links: [],
         summary: "",
         suggestions: [],

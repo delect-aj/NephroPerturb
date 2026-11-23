@@ -11,22 +11,22 @@ allowed_tools:
   - profile_compound
 requires_literature: true
 output_sections:
-  - "1. Evidence Verdict & Novelty"
-  - "2. Efficacy Literature Synthesis"
-  - "3. Nephrotoxicity & Clinical Trials"
-  - "4. Decision Takeaway"
+  - "1. Executive Evidence Verdict & Novelty"
+  - "2. Synthesized Kidney Efficacy Literature"
+  - "3. Integrated Nephrotoxicity & Clinical Trials Review"
+  - "4. Translational Takeaway"
 example_prompt: "Check Europe PMC literature, nephrotoxicity reports, and clinical trials for dexamethasone in diabetic kidney disease"
 ---
 ## Execution Protocol
 1. Resolve up to 2 target drugs/genes (including session references `#1`, `#2`).
-2. Batch `search_literature(entity=..., disease_context=..., include_safety=true)` + `search_clinical_trials` (and `profile_compound` if T-DIKI tier is unknown).
+2. Batch `search_literature(entity=..., disease_context=..., include_safety=true)` + `search_clinical_trials` (plus `profile_compound` if NephroSafe `T-DIKI` is unknown).
 
-## Fixed Output Format (Use Exact Headings)
-### 1. Evidence Verdict & Novelty
-State per-entity `evidence_tier`, hit counts (`efficacy_total_hits`, `safety_total_hits`), provider, and whether it represents `Novel (0 renal papers)`.
-### 2. Efficacy Literature Synthesis
-Synthesize concrete biological/clinical conclusions across papers using their `takeaway`s (not just titles), citing `[PMID:<digits>]` after each claim.
-### 3. Nephrotoxicity & Clinical Trials
-Summarize nephrotoxicity warnings from safety papers (`[PMID:<digits>]`) alongside NephroSafe `T-DIKI`/`DIRIL` status, plus registered kidney trials (`[NCT<8-digits>]` with phase & status).
-### 4. Decision Takeaway
-One concise translational recommendation grounded in both efficacy and safety evidence. Never invent PMIDs, NCTs, BRDs, or numbers.
+## Fixed Output Format (Cohesive Academic Prose — No Mechanical Bullet Listing)
+### 1. Executive Evidence Verdict & Novelty
+Write 2-3 cohesive sentences giving the overall `evidence_tier`, efficacy vs. safety publication volume, and whether the candidate represents an established therapy or a `Novel (0 renal papers)` repurposing lead.
+### 2. Synthesized Kidney Efficacy Literature
+Write **one to two logical prose paragraphs** synthesizing themes, experimental models, clinical outcomes, and mechanisms across the retrieved paper `takeaway`s with inline `[PMID:<digits>]` citations (never simply copy raw titles one-by-one).
+### 3. Integrated Nephrotoxicity & Clinical Trials Review
+Write one cohesive paragraph integrating published renal toxicity warnings (`[PMID:<digits>]`) with NephroSafe `T-DIKI`/`DIRIL` status, followed by a synthesis of registered ClinicalTrials.gov phases/status (`[NCT<8-digits>]`).
+### 4. Translational Takeaway
+Write 2 crisp sentences weighing therapeutic promise against safety liability. Do NOT write a manual References section (auto-appended). Never invent IDs or numbers.

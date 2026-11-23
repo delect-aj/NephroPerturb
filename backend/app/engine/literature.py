@@ -27,26 +27,29 @@ _EPMC_FAIL_UNTIL = 0.0
 _PUBMED_RATE_LOCK = threading.Lock()
 _LAST_PUBMED_TS = 0.0
 
-RENAL_DISEASE_TERMS = {
-    "dkd": '"diabetic kidney disease" OR "diabetic nephropathy" OR "diabetic glomerulopathy"',
-    "diabetic": '"diabetic kidney disease" OR "diabetic nephropathy"',
-    "dn": '"diabetic kidney disease" OR "diabetic nephropathy"',
-    "ln": '"lupus nephritis"',
-    "lupus": '"lupus nephritis"',
-    "igan": '"IgA nephropathy"',
-    "aki": '"acute kidney injury" OR "renal ischemia"',
-    "ckd": '"chronic kidney disease" OR "renal fibrosis" OR "kidney fibrosis"',
-    "fsgs": '"focal segmental glomerulosclerosis"',
-    "fibrosis": '"renal fibrosis" OR "kidney fibrosis" OR "tubulointerstitial fibrosis"',
-    "podocyte": '"podocyte" OR "glomerular disease" OR "proteinuria"',
-    "tubule": '"renal tubular" OR "proximal tubule" OR "tubular injury"',
-    "default": '"kidney disease" OR "renal fibrosis" OR "nephropathy" OR "glomerular" OR "diabetic kidney"',
+RENAL_DISEASE_PHRASES = {
+    "dkd": ["diabetic kidney disease", "diabetic nephropathy", "diabetic glomerulopathy"],
+    "diabetic": ["diabetic kidney disease", "diabetic nephropathy"],
+    "dn": ["diabetic kidney disease", "diabetic nephropathy"],
+    "ln": ["lupus nephritis"],
+    "lupus": ["lupus nephritis"],
+    "igan": ["IgA nephropathy"],
+    "aki": ["acute kidney injury", "renal ischemia"],
+    "ckd": ["chronic kidney disease", "renal fibrosis", "kidney fibrosis"],
+    "fsgs": ["focal segmental glomerulosclerosis"],
+    "fibrosis": ["renal fibrosis", "kidney fibrosis", "tubulointerstitial fibrosis"],
+    "podocyte": ["podocyte", "glomerular disease", "proteinuria"],
+    "tubule": ["renal tubular", "proximal tubule", "tubular injury"],
+    "default": ["kidney disease", "renal fibrosis", "nephropathy", "glomerular", "diabetic kidney"],
 }
 
-SAFETY_QUERY_TERMS = (
-    '"nephrotoxicity" OR "acute kidney injury" OR "drug-induced kidney injury" '
-    'OR "renal toxicity" OR "tubulotoxicity"'
-)
+SAFETY_PHRASES = [
+    "nephrotoxicity",
+    "acute kidney injury",
+    "drug-induced kidney injury",
+    "renal toxicity",
+    "tubulotoxicity",
+]
 
 _CLINICAL_RE = re.compile(
     r"\b(randomized|randomised|clinical trial|phase\s*[i1v234]+|placebo[- ]controlled|"
@@ -131,17 +134,29 @@ def _extract_takeaway(raw_abstract: str | None, title: str = "", max_len: int = 
     return _strip_text(clean, max_len)
 
 
-def _expand_disease_terms(disease_context: str | None) -> str:
+def _expand_disease_phrases(disease_context: str | None) -> list[str]:
     ctx = (disease_context or "").strip().lower()
     if not ctx:
-        return RENAL_DISEASE_TERMS["default"]
-    for key, expr in RENAL_DISEASE_TERMS.items():
+        return list(RENAL_DISEASE_PHRASES["default"])
+    for key, phrases in RENAL_DISEASE_PHRASES.items():
         if key != "default" and key in ctx:
-            return expr
+            return list(phrases)
     safe_ctx = re.sub(r'["\n\r]+', " ", ctx).strip()
     if len(safe_ctx) > 4 and "kidney" not in safe_ctx and "renal" not in safe_ctx:
-        return f'"{safe_ctx}" OR {RENAL_DISEASE_TERMS["default"]}'
-    return f'"{safe_ctx}"'
+        return [safe_ctx] + list(RENAL_DISEASE_PHRASES["default"])
+    return [safe_ctx]
+
+
+def _build_epmc_query(entity: str, phrases: list[str]) -> str:
+    """Restrict Europe PMC to Title/Abstract & MEDLINE so relevance beats full-text mega-reviews."""
+    or_terms = " OR ".join(f'"{p}"' for p in phrases)
+    return f'(TITLE:"{entity}" OR ABSTRACT:"{entity}") AND (TITLE:({or_terms}) OR ABSTRACT:({or_terms})) AND SRC:MED'
+
+
+def _build_pubmed_query(entity: str, phrases: list[str]) -> str:
+    """Restrict NCBI PubMed to [Title/Abstract] for focused kidney pharmacology matches."""
+    or_terms = " OR ".join(f'"{p}"[Title/Abstract]' for p in phrases)
+    return f'"{entity}"[Title/Abstract] AND ({or_terms})'
 
 
 def _http_get(url: str, timeout: float = 8.0) -> bytes:
@@ -192,7 +207,6 @@ def _query_europepmc(query: str, max_results: int = 4, timeout: float | None = N
         "format": "json",
         "resultType": "core",
         "pageSize": str(max(1, min(10, int(max_results)))),
-        "sort": "CITED desc",
     })
     url = f"https://www.ebi.ac.uk/europepmc/webservices/rest/search?{params}"
     try:
@@ -224,7 +238,7 @@ def _query_europepmc(query: str, max_results: int = 4, timeout: float | None = N
         else:
             link = f"https://doi.org/{doi}"
         clean_title = _strip_text(r.get("title"), 220)
-        takeaway = _extract_takeaway(r.get("abstractText"), title=clean_title, max_len=220)
+        takeaway = _extract_takeaway(r.get("abstractText"), title=clean_title, max_len=260)
         papers.append({
             "pmid": pmid or None,
             "pmcid": pmcid or None,
@@ -332,7 +346,7 @@ def _query_pubmed(query: str, max_results: int = 4, timeout: float = 8.0) -> dic
             lbl = (ab.attrib.get("Label") or ab.attrib.get("NlmCategory") or "").strip()
             abs_parts.append(f"{lbl}: {txt}" if lbl and not txt.upper().startswith(lbl.upper()) else txt)
         clean_title = _strip_text(title, 220)
-        takeaway = _extract_takeaway(" ".join(abs_parts), title=clean_title, max_len=220)
+        takeaway = _extract_takeaway(" ".join(abs_parts), title=clean_title, max_len=260)
         papers.append({
             "pmid": pmid,
             "pmcid": pmcid or None,
@@ -351,15 +365,15 @@ def _query_pubmed(query: str, max_results: int = 4, timeout: float = 8.0) -> dic
     return {"total_hits": total_hits, "papers": papers, "provider": "pubmed"}
 
 
-def _run_lit_query(query: str, max_results: int) -> dict:
+def _run_lit_query(entity: str, phrases: list[str], max_results: int) -> dict:
     epmc_err = None
     try:
-        return _query_europepmc(query, max_results=max_results)
+        return _query_europepmc(_build_epmc_query(entity, phrases), max_results=max_results)
     except Exception as exc:
         epmc_err = str(exc)
 
     try:
-        res = _query_pubmed(query, max_results=max_results)
+        res = _query_pubmed(_build_pubmed_query(entity, phrases), max_results=max_results)
         res["fallback_from"] = f"europepmc ({epmc_err[:80]})"
         return res
     except Exception as pub_exc:
@@ -485,7 +499,7 @@ def search_kidney_literature(
         raise ValueError("entity is required for literature search")
     clean_ctx = (disease_context or "kidney disease").strip()
     n_max = max(2, min(10, int(max_papers)))
-    cache_key = "lit2:" + hashlib.sha256(
+    cache_key = "lit3:" + hashlib.sha256(
         f"{clean_ent.lower()}|{clean_ctx.lower()}|{int(include_safety)}|{n_max}".encode()
     ).hexdigest()
 
@@ -493,10 +507,9 @@ def search_kidney_literature(
     if cached is not None:
         return cached
 
-    renal_expr = _expand_disease_terms(clean_ctx)
-    eff_query = f'("{clean_ent}") AND ({renal_expr})'
+    renal_phrases = _expand_disease_phrases(clean_ctx)
     eff_n = max(2, n_max - (2 if include_safety else 0))
-    eff_res = _run_lit_query(eff_query, max_results=eff_n)
+    eff_res = _run_lit_query(clean_ent, renal_phrases, max_results=eff_n)
 
     papers_by_key = {}
     eff_papers = []
@@ -510,8 +523,7 @@ def search_kidney_literature(
 
     safe_res = {"total_hits": 0, "papers": [], "provider": eff_res.get("provider")}
     if include_safety and eff_res.get("provider") != "unavailable":
-        safe_query = f'("{clean_ent}") AND ({SAFETY_QUERY_TERMS})'
-        safe_res = _run_lit_query(safe_query, max_results=2)
+        safe_res = _run_lit_query(clean_ent, SAFETY_PHRASES, max_results=2)
         for p in safe_res.get("papers", []):
             cat = _classify_paper(p, is_safety_query=True)
             item = {**p, "category": cat, "query_role": "safety"}
@@ -589,7 +601,7 @@ def search_clinical_trials(
         raise ValueError("compound is required for clinical trials search")
     clean_cond = (condition or "kidney disease").strip()
     n_max = max(1, min(10, int(max_trials)))
-    cache_key = "ct2:" + hashlib.sha256(
+    cache_key = "ct3:" + hashlib.sha256(
         f"{clean_cp.lower()}|{clean_cond.lower()}|{n_max}".encode()
     ).hexdigest()
 

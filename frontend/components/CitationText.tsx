@@ -2,7 +2,7 @@
 import React from "react";
 
 const TOKEN_RE =
-  /(\[PMID:\s*\d{5,9}\]|\[NCT\d{8}\]|\*\*[^*]+\*\*|`[^`]+`)/g;
+  /(\[PMID:\s*\d{5,9}\]|\[NCT\d{8}\]|\*\*[^*]+\*\*|\*[^*\n]+\*|`[^`]+`)/g;
 
 function renderInline(line: string, keyPrefix: string): React.ReactNode[] {
   const parts = line.split(TOKEN_RE);
@@ -43,6 +43,9 @@ function renderInline(line: string, keyPrefix: string): React.ReactNode[] {
     if (part.startsWith("**") && part.endsWith("**") && part.length > 4) {
       return <strong key={k}>{part.slice(2, -2)}</strong>;
     }
+    if (part.startsWith("*") && part.endsWith("*") && part.length > 2) {
+      return <em key={k}>{part.slice(1, -1)}</em>;
+    }
     if (part.startsWith("`") && part.endsWith("`") && part.length > 2) {
       return (
         <code key={k} className="inline-code">
@@ -54,37 +57,114 @@ function renderInline(line: string, keyPrefix: string): React.ReactNode[] {
   });
 }
 
+function splitTableRow(line: string): string[] {
+  const trimmed = line.trim().replace(/^\|/, "").replace(/\|$/, "");
+  return trimmed.split("|").map((c) => c.trim());
+}
+
+function isSeparatorRow(line: string): boolean {
+  return /^\|?(\s*:?-{2,}:?\s*\|)+\s*:?-{2,}:?\s*\|?$/.test(line.trim());
+}
+
 export default function CitationText({ text }: { text: string }) {
   if (!text) return null;
   const lines = text.split(/\r?\n/);
+  const nodes: React.ReactNode[] = [];
+  let i = 0;
 
-  return (
-    <div className="cite-text">
-      {lines.map((rawLine, idx) => {
-        const line = rawLine.trim();
-        if (!line) return <div key={`sp-${idx}`} style={{ height: 5 }} />;
-        if (line.startsWith("### ") || line.startsWith("## ")) {
-          const clean = line.replace(/^#{2,3}\s+/, "");
-          return (
-            <div key={`h-${idx}`} className="cite-heading">
-              {renderInline(clean, `h-${idx}`)}
-            </div>
-          );
-        }
-        if (line.startsWith("- ") || line.startsWith("* ")) {
-          return (
-            <div key={`li-${idx}`} className="cite-bullet">
-              <span className="cite-dot">•</span>
-              <div>{renderInline(line.slice(2), `li-${idx}`)}</div>
-            </div>
-          );
-        }
-        return (
-          <div key={`p-${idx}`} className="cite-para">
-            {renderInline(line, `p-${idx}`)}
-          </div>
-        );
-      })}
-    </div>
-  );
+  while (i < lines.length) {
+    const rawLine = lines[i];
+    const line = rawLine.trim();
+    if (!line) {
+      i += 1;
+      continue;
+    }
+
+    // Markdown table block
+    if (line.includes("|") && i + 1 < lines.length && isSeparatorRow(lines[i + 1])) {
+      const headers = splitTableRow(line);
+      const bodyRows: string[][] = [];
+      let j = i + 2;
+      while (j < lines.length && lines[j].trim().includes("|") && lines[j].trim() !== "") {
+        bodyRows.push(splitTableRow(lines[j]));
+        j += 1;
+      }
+      nodes.push(
+        <div key={`tbl-${i}`} className="cite-table-wrap">
+          <table>
+            <thead>
+              <tr>
+                {headers.map((h, hIdx) => (
+                  <th key={`th-${i}-${hIdx}`}>{renderInline(h, `th-${i}-${hIdx}`)}</th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              {bodyRows.map((row, rIdx) => (
+                <tr key={`tr-${i}-${rIdx}`}>
+                  {headers.map((_, cIdx) => (
+                    <td key={`td-${i}-${rIdx}-${cIdx}`}>
+                      {renderInline(row[cIdx] || "—", `td-${i}-${rIdx}-${cIdx}`)}
+                    </td>
+                  ))}
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      );
+      i = j;
+      continue;
+    }
+
+    // Section heading (### / ##)
+    if (line.startsWith("### ") || line.startsWith("## ")) {
+      const clean = line.replace(/^#{2,3}\s+/, "");
+      nodes.push(
+        <div key={`h-${i}`} className="cite-section-h">
+          {renderInline(clean, `h-${i}`)}
+        </div>
+      );
+      i += 1;
+      continue;
+    }
+
+    // Bullet item
+    if (line.startsWith("- ") || line.startsWith("* ")) {
+      nodes.push(
+        <div key={`li-${i}`} className="cite-bullet">
+          <span className="cite-dot">•</span>
+          <div>{renderInline(line.slice(2), `li-${i}`)}</div>
+        </div>
+      );
+      i += 1;
+      continue;
+    }
+
+    // Flowing prose paragraph (merge consecutive plain text lines)
+    const paraLines = [line];
+    let j = i + 1;
+    while (j < lines.length) {
+      const nxt = lines[j].trim();
+      if (
+        !nxt ||
+        nxt.startsWith("#") ||
+        nxt.startsWith("- ") ||
+        nxt.startsWith("* ") ||
+        (nxt.includes("|") && j + 1 < lines.length && isSeparatorRow(lines[j + 1]))
+      ) {
+        break;
+      }
+      paraLines.push(nxt);
+      j += 1;
+    }
+    nodes.push(
+      <p key={`p-${i}`} className="cite-para">
+        {renderInline(paraLines.join(" "), `p-${i}`)}
+      </p>
+    );
+    i = j;
+  }
+
+  return <div className="cite-text">{nodes}</div>;
 }

@@ -99,7 +99,7 @@ rm -rf frontend/out            # 清理早期 rsync 的未跟踪目录（v1.1.0 
 git pull origin main
 systemctl --user restart nephroperturb-lite
 sleep 3 && curl -fsS http://127.0.0.1:8091/health && echo
-# 预期输出包含 "version":"1.2.1","mode":"lite","mcp_mounted":true
+# 预期输出包含 "version":"1.2.2","mode":"lite","mcp_mounted":true
 ```
 
 ---
@@ -109,7 +109,7 @@ sleep 3 && curl -fsS http://127.0.0.1:8091/health && echo
 ```bash
 # 1) 查看服务健康与 Lite 模式确认
 curl -fsS http://127.0.0.1:8091/health
-# 预期输出包含 "version":"1.2.1","mode":"lite","mcp_mounted":true
+# 预期输出包含 "version":"1.2.2","mode":"lite","mcp_mounted":true
 
 # 2) 验证 Agent 状态（DeepSeek 配置与每小时剩余配额）与 6 个 Skill
 curl -fsS http://127.0.0.1:8091/api/v1/agent/status && echo

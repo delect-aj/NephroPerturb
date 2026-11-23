@@ -11,23 +11,23 @@ allowed_tools:
   - search_literature
 requires_literature: true
 output_sections:
-  - "1. Structural Neighbors & Consensus MoA"
-  - "2. Top Neighbor Safety & Kidney Profile"
-  - "3. Literature & Clinical Synthesis"
-  - "4. Actionable Recommendation"
+  - "1. Chemical Neighborhood & Consensus MoA"
+  - "2. Closest Neighbor Safety & Kidney Profile"
+  - "3. Integrated Literature & Clinical Review"
+  - "4. Translational Recommendation & Next Steps"
 example_prompt: "Find structural analogs to CC(=O)OC1=CC=CC=C1C(=O)O, infer MoA and NephroSafe risk, and check kidney literature for the top neighbor"
 ---
 ## Execution Protocol
 1. Call `find_safe_analogs` using the provided `smiles` or `compound`.
 2. Call `profile_compound` using the **exact `pert_id`** of the closest named/MoA-annotated neighbor.
-3. Call `search_literature(entity=<neighbor name>, include_safety=true)` on that top neighbor.
+3. Call `search_literature(entity=<neighbor name>, include_safety=true)` on that neighbor.
 
-## Fixed Output Format (Use Exact Headings)
-### 1. Structural Neighbors & Consensus MoA
-Report inferred `consensus_moa` and Top-3 analogs (`pert_id`, Tanimoto, T-DIKI tier, phase).
-### 2. Top Neighbor Safety & Kidney Profile
-Summarize targets, key PROGENy/renal modules, T-DIKI probability, and DIRIL status of the profiled neighbor.
-### 3. Literature & Clinical Synthesis
-Synthesize the neighbor's retrieved paper `takeaway`s cleanly (**Evidence Verdict**, **Efficacy Findings** with `[PMID:<digits>]`, **Safety Signals** with `[PMID:<digits>]`, and novelty standing).
-### 4. Actionable Recommendation
-State predicted pharmacological MoA and safest chemical starting point. Never invent PMIDs, BRDs, or numbers.
+## Fixed Output Format (Cohesive Academic Prose — No Mechanical Bullet Listing)
+### 1. Chemical Neighborhood & Consensus MoA
+State the inferred `consensus_moa` and summarize Top-3 neighbors in a compact Markdown table (`Rank | Compound | pert_id | Tanimoto | T-DIKI | MoA`).
+### 2. Closest Neighbor Safety & Kidney Profile
+Write one flowing paragraph covering targets, PROGENy/renal modules, T-DIKI probability, and DIRIL status of the profiled neighbor.
+### 3. Integrated Literature & Clinical Review
+Write **one to two cohesive prose paragraphs** synthesizing the neighbor's renal efficacy findings and nephrotoxicity warnings from retrieved paper `takeaway`s with inline `[PMID:<digits>]` citations, noting whether kidney evidence is well-established or novel.
+### 4. Translational Recommendation & Next Steps
+Write 2 crisp sentences on predicted pharmacology and safest scaffold direction. Do NOT write a manual References section (auto-appended). Never invent IDs or numbers.

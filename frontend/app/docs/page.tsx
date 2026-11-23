@@ -3,10 +3,10 @@ export default function DocsPage() {
     <>
       <div className="page-head">
         <h1>API &amp; MCP Docs</h1>
-        <span className="badge blue">v1.2.1</span>
+        <span className="badge blue">v1.2.2</span>
       </div>
       <div className="sub">
-        Skill-guided DeepSeek ReAct agent with fixed 4-section output contracts, Conclusion/Results literature synthesis, SSE streaming, and 9 MCP tools.
+        Skill-guided DeepSeek ReAct agent with Title/Abstract Europe PMC &amp; PubMed search, cohesive 4-section synthesis reports, auto-verified References, SSE streaming, and 9 MCP tools.
       </div>
 
       <div className="grid cols-2">

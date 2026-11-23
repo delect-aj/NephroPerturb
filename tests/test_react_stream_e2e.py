@@ -63,13 +63,13 @@ def stream_sse(body: dict, timeout: int = 60) -> tuple[list[tuple[str, dict]], d
 
 def main():
     h = get_json("/health")
-    assert h["version"] == "1.2.1" and h["agent_version"] == "1.2.1", h
+    assert h["version"] == "1.2.2" and h["agent_version"] == "1.2.2", h
 
     sk = get_json("/api/v1/agent/skills")
     assert len(sk["skills"]) == 6, sk
 
     st = get_json("/api/v1/agent/status")
-    assert st["version"] == "1.2.1" and "quota" in st, st
+    assert st["version"] == "1.2.2" and "quota" in st, st
 
     # 1. Direct Literature + ClinicalTrials search & cache latency check
     t0 = time.perf_counter()
@@ -104,9 +104,10 @@ def main():
     assert done1["status"] == "ok" and done1["skill_id"] == "disease-repurposing", done1
     assert done1["verification"]["verified"] is True, done1["verification"]
     assert len(done1["table"]["rows"]) > 0, done1
-    assert "### 3. Literature & Clinical Synthesis" in done1["summary"], done1["summary"]
+    assert "### 3. Integrated Literature & Clinical Review" in done1["summary"], done1["summary"]
     assert all("synthesis" in g for g in done1["literature"]), done1["literature"]
-    print(f"  [OK] SSE Turn 1 (disease-repurposing, rows={len(done1['table']['rows'])}, lits={len(done1['literature'])}, pmids={done1['verification']['pmids_cited']})")
+    assert len(done1.get("references") or []) >= 1, done1
+    print(f"  [OK] SSE Turn 1 (disease-repurposing, rows={len(done1['table']['rows'])}, refs={len(done1['references'])}, pmids={done1['verification']['pmids_cited']})")
 
     # 4. Multi-turn SSE stream (Turn 2: follow-up ordinal reference "#1 and #2")
     ev2, done2 = stream_sse({
@@ -118,7 +119,7 @@ def main():
     assert done2["status"] == "ok" and done2["skill_id"] == "compound-compare", done2
     assert done2.get("comparison") and len(done2["comparison"]["compounds"]) == 2, done2
     assert done2["verification"]["verified"] is True
-    assert "### 3. Literature & Clinical Synthesis" in done2["summary"], done2["summary"]
+    assert "### 3. Integrated Literature & Clinical Review" in done2["summary"], done2["summary"]
     print(f"  [OK] SSE Turn 2 multi-turn compare (#1 vs #2 -> {done2['comparison']['highlights']})")
 
     # 5. Toxicity rescue flow
@@ -130,10 +131,11 @@ def main():
     })
     assert done_tox["status"] == "ok" and done_tox["skill_id"] == "toxicity-rescue", done_tox
     assert len(done_tox["table"]["rows"]) > 0, done_tox
-    assert "### 3. Literature & Clinical Synthesis" in done_tox["summary"], done_tox["summary"]
-    print(f"  [OK] SSE toxicity-rescue (analogs={len(done_tox['table']['rows'])})")
+    assert "### 3. Integrated Literature & Clinical Review" in done_tox["summary"], done_tox["summary"]
+    assert len(done_tox.get("references") or []) >= 1, done_tox
+    print(f"  [OK] SSE toxicity-rescue (analogs={len(done_tox['table']['rows'])}, refs={len(done_tox['references'])})")
 
-    # 6. Optional live DeepSeek ReAct verification (fixed sections + cited PMIDs + no truncation)
+    # 6. Optional live DeepSeek ReAct verification (cohesive prose + verified PMIDs + References)
     if st["llm_configured"] and st["quota"]["allowed"]:
         _, done_llm = stream_sse({
             "text": "Find reversal drugs for the DKD glomeruli case, auto-filter High T-DIKI hits if needed, and verify literature & clinical trials for top candidates",
@@ -144,12 +146,13 @@ def main():
         assert done_llm["status"] == "ok", done_llm
         assert done_llm["mode_effective"] == "deepseek_react", done_llm
         assert done_llm["verification"]["verified"] is True, done_llm["verification"]
-        assert "Literature & Clinical Synthesis" in done_llm["summary"], done_llm["summary"]
+        assert "Integrated Literature & Clinical Review" in done_llm["summary"], done_llm["summary"]
         assert len(done_llm["verification"].get("pmids_cited") or []) >= 1, done_llm["summary"]
-        assert 0 < done_llm["usage"]["total_tokens"] < 15000, done_llm["usage"]
+        assert len(done_llm.get("references") or []) >= 1, done_llm
+        assert 0 < done_llm["usage"]["total_tokens"] < 16000, done_llm["usage"]
         print(
             f"  [OK] DeepSeek live ReAct (tokens={done_llm['usage']['total_tokens']}, "
-            f"pmids={done_llm['verification']['pmids_cited']}, ms={done_llm['elapsed_ms']})"
+            f"pmids={done_llm['verification']['pmids_cited']}, refs={len(done_llm['references'])}, ms={done_llm['elapsed_ms']})"
         )
     else:
         print("  [SKIP] DeepSeek live ReAct (key not configured or quota depleted)")

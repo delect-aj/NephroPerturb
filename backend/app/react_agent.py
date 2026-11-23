@@ -28,6 +28,8 @@ from .session_store import load_session, resolve_session_references, save_sessio
 from .skills_loader import get_skill, select_skill
 from .verifier import (
     EvidencePool,
+    NCT_RE,
+    PMID_CITE_RE,
     build_repair_prompt,
     verify_grounded_response,
 )
@@ -669,10 +671,11 @@ def _dispatch_tool(
                 "role": p.get("query_role"),
                 "cat": p.get("category"),
                 "year": p.get("year"),
-                "title": (p.get("title") or "")[:95],
-                "takeaway": (p.get("takeaway") or p.get("snippet") or "")[:160],
+                "journal": p.get("journal"),
+                "title": (p.get("title") or "")[:110],
+                "takeaway": (p.get("takeaway") or p.get("snippet") or "")[:230],
             }
-            for p in (lit.get("papers") or [])[:3]
+            for p in (lit.get("papers") or [])[:5]
         ]
         synth = lit.get("synthesis") or {}
         digest = {
@@ -748,62 +751,163 @@ def _first_safe_candidates(rows: list[dict], limit: int = 2) -> list[tuple[str, 
     return safe
 
 
+def _build_references(summary: str, artifacts: dict) -> list[dict]:
+    """Deterministically build a verified numbered bibliography from cited & retrieved sources."""
+    papers_by_pmid: dict[str, dict] = {}
+    ordered_papers: list[dict] = []
+    for grp in artifacts.get("literature") or []:
+        ent = grp.get("entity") or ""
+        for p in grp.get("papers") or []:
+            pm = str(p.get("pmid") or "").strip()
+            if pm and pm not in papers_by_pmid:
+                rec = {
+                    "kind": "paper",
+                    "id": f"PMID:{pm}",
+                    "pmid": pm,
+                    "authors": p.get("authors") or "et al.",
+                    "year": p.get("year") or "—",
+                    "title": p.get("title") or "",
+                    "journal": p.get("journal") or "",
+                    "category": p.get("category") or "Literature",
+                    "entity": ent,
+                    "url": p.get("url") or f"https://pubmed.ncbi.nlm.nih.gov/{pm}/",
+                }
+                papers_by_pmid[pm] = rec
+                ordered_papers.append(rec)
+
+    trials_by_nct: dict[str, dict] = {}
+    ordered_trials: list[dict] = []
+    for grp in artifacts.get("clinical_trials") or []:
+        cp = grp.get("compound") or ""
+        for tr in grp.get("trials") or []:
+            nct = str(tr.get("nct_id") or "").strip().upper()
+            if nct and nct not in trials_by_nct:
+                rec = {
+                    "kind": "trial",
+                    "id": nct,
+                    "nct_id": nct,
+                    "title": tr.get("title") or "",
+                    "phases": tr.get("phases") or ["N/A"],
+                    "status": tr.get("status") or "UNKNOWN",
+                    "compound": cp,
+                    "url": tr.get("url") or f"https://clinicaltrials.gov/study/{nct}",
+                }
+                trials_by_nct[nct] = rec
+                ordered_trials.append(rec)
+
+    refs: list[dict] = []
+    seen: set[str] = set()
+
+    # 1) Cited PMIDs and NCTs in order of appearance in summary
+    for m in re.finditer(
+        r"(?:PMID[:\s#-]*(\d{5,9}))|\b(NCT\d{8})\b",
+        summary or "",
+        re.I,
+    ):
+        pm = m.group(1)
+        nct = m.group(2).upper() if m.group(2) else None
+        if pm and pm in papers_by_pmid and f"PMID:{pm}" not in seen:
+            seen.add(f"PMID:{pm}")
+            refs.append({**papers_by_pmid[pm], "cited_in_text": True})
+        elif nct and nct in trials_by_nct and nct not in seen:
+            seen.add(nct)
+            refs.append({**trials_by_nct[nct], "cited_in_text": True})
+
+    # 2) If summary didn't cite every key source or cited none, append top supporting sources
+    if len(refs) < 4:
+        for rec in ordered_papers[:4] + ordered_trials[:2]:
+            if rec["id"] not in seen:
+                seen.add(rec["id"])
+                refs.append({**rec, "cited_in_text": False})
+                if len(refs) >= 8:
+                    break
+
+    for idx, r in enumerate(refs, 1):
+        r["index"] = idx
+    return refs
+
+
 def _append_literature_section(lines: list[str], lits: list[dict], trials: list[dict], heading: str) -> None:
     lines.append(f"\n{heading}")
     if not lits and not trials:
-        lines.append("- Literature and trial tools did not return records for this turn.")
+        lines.append("No kidney literature or clinical trial records were retrieved for this turn.")
         return
     trials_by_name = {str(t.get("compound", "")).lower(): t for t in trials}
     seen_trial_ents = set()
+    eff_paragraphs: list[str] = []
+    safe_paragraphs: list[str] = []
+
     for lit in lits:
         ent = str(lit.get("entity") or "Unknown")
         seen_trial_ents.add(ent.lower())
         synth = lit.get("synthesis") or {}
         tier = lit.get("evidence_tier") or "Unknown"
-        verdict = synth.get("verdict") or f"{tier} ({lit.get('efficacy_total_hits', 0)} efficacy, {lit.get('safety_total_hits', 0)} safety hits via {lit.get('provider')})"
-        novelty = synth.get("novelty_note") or ""
-        lines.append(f"- **{ent} — Evidence Verdict**: `{verdict}` {novelty}")
-
+        eff_hits = int(lit.get("efficacy_total_hits") or 0)
+        safe_hits = int(lit.get("safety_total_hits") or 0)
         eff_pts = synth.get("efficacy_points") or []
-        if eff_pts:
-            eff_strs = []
-            for pt in eff_pts[:2]:
-                pm = f" [PMID:{pt['pmid']}]" if pt.get("pmid") else ""
-                eff_strs.append(f"{pt.get('finding')}{pm}")
-            lines.append(f"  - *Efficacy Findings*: {' | '.join(eff_strs)}")
-        else:
-            lines.append("  - *Efficacy Findings*: 0 kidney efficacy papers retrieved (`Novel (0 renal papers)` candidate).")
-
         safe_pts = synth.get("safety_points") or []
-        if safe_pts:
-            sf_strs = []
-            for pt in safe_pts[:2]:
-                pm = f" [PMID:{pt['pmid']}]" if pt.get("pmid") else ""
-                sf_strs.append(f"{pt.get('finding')}{pm}")
-            lines.append(f"  - *Nephrotoxicity Signals*: {' | '.join(sf_strs)}")
+
+        if eff_pts:
+            findings_txt = " ".join(
+                f"{pt.get('finding').rstrip('.')} [PMID:{pt['pmid']}]."
+                if pt.get("pmid")
+                else f"{pt.get('finding').rstrip('.')}."
+                for pt in eff_pts[:2]
+            )
+            eff_paragraphs.append(
+                f"For **{ent}** (`{tier}` evidence; {eff_hits} kidney efficacy hits via {lit.get('provider')}), "
+                f"prior studies report: {findings_txt}"
+            )
         else:
-            lines.append(f"  - *Nephrotoxicity Signals*: No safety papers extracted (total safety hits={lit.get('safety_total_hits', 0)}).")
+            eff_paragraphs.append(
+                f"**{ent}** has 0 indexed kidney efficacy publications (`Novel (0 renal papers)`), "
+                f"positioning it as an untested repurposing hypothesis in renal pathology."
+            )
 
         tinfo = trials_by_name.get(ent.lower())
+        trial_clause = ""
         if tinfo:
             trs = tinfo.get("trials") or []
             scope = f" ({tinfo['scope_note']})" if tinfo.get("scope_note") else ""
             if trs:
-                t_strs = [
-                    f"{'/'.join(tr.get('phases') or ['N/A'])} {tr.get('status')} — {tr.get('title')} [{tr['nct_id']}]"
+                t_list = "; ".join(
+                    f"{'/'.join(tr.get('phases') or ['N/A'])} ({tr.get('status')}) — {tr.get('title')} [{tr['nct_id']}]"
                     for tr in trs[:2]
-                ]
-                lines.append(f"  - *Clinical Trials ({tinfo.get('total_count', len(trs))})*{scope}: {' ; '.join(t_strs)}")
+                )
+                trial_clause = f" On ClinicalTrials.gov, {tinfo.get('total_count', len(trs))} kidney studies were identified{scope}, including {t_list}."
             else:
-                lines.append(f"  - *Clinical Trials*: 0 registered studies found{scope}.")
+                trial_clause = f" No registered kidney trials were identified on ClinicalTrials.gov{scope}."
+
+        if safe_pts:
+            sf_txt = " ".join(
+                f"{pt.get('finding').rstrip('.')} [PMID:{pt['pmid']}]."
+                if pt.get("pmid")
+                else f"{pt.get('finding').rstrip('.')}."
+                for pt in safe_pts[:2]
+            )
+            safe_paragraphs.append(
+                f"Regarding renal safety of **{ent}** ({safe_hits} nephrotoxicity/AKI hits), literature notes: {sf_txt}{trial_clause}"
+            )
+        else:
+            safe_paragraphs.append(
+                f"No direct nephrotoxicity warning abstracts were extracted for **{ent}** (safety hits={safe_hits}).{trial_clause}"
+            )
 
     for tr_blk in trials:
         nm = str(tr_blk.get("compound") or "")
         if nm.lower() in seen_trial_ents:
             continue
         trs = tr_blk.get("trials") or []
-        t_strs = [f"[{t['nct_id']}] {t.get('title')}" for t in trs[:2]]
-        lines.append(f"- **{nm} Clinical Trials**: {tr_blk.get('total_count', 0)} studies. {' ; '.join(t_strs)}")
+        t_strs = "; ".join(f"{t.get('title')} [{t['nct_id']}]" for t in trs[:2])
+        safe_paragraphs.append(
+            f"ClinicalTrials.gov lists {tr_blk.get('total_count', 0)} kidney studies for **{nm}**: {t_strs or 'none'}."
+        )
+
+    if eff_paragraphs:
+        lines.append(" ".join(eff_paragraphs))
+    if safe_paragraphs:
+        lines.append("")
+        lines.append(" ".join(safe_paragraphs))
 
 
 def _build_deterministic_synthesis(
@@ -811,7 +915,7 @@ def _build_deterministic_synthesis(
     artifacts: dict,
     steps: list[dict],
 ) -> str:
-    """Zero-hallucination structured report matching each Skill's fixed ### 1..4 sections."""
+    """Zero-hallucination narrative report matching each Skill's fixed ### 1..4 sections."""
     lines: list[str] = []
     rows = artifacts.get("raw_rows") or []
     lits = artifacts.get("literature") or []
@@ -825,31 +929,41 @@ def _build_deterministic_synthesis(
     if skill_id == "compound-compare" and comp_cmp and comp_cmp.get("compounds"):
         cps = comp_cmp["compounds"]
         hl = comp_cmp.get("highlights") or {}
-        lines.append("### 1. Safety & Clinical Maturity Comparison")
-        for c in cps:
-            lines.append(
-                f"- **{c['pert_iname']}** (`{c['pert_id']}`, {c['clinical_phase']}, MoA `{c['moa']}`): "
-                f"T-DIKI `{c['tdiki_tier']}` (p={_fmt_num(c.get('tdiki_prob'), 3)}), DIRIL `{_fmt_diril(c.get('diril_label'))}`."
-            )
-        lines.append("\n### 2. Pathway & Renal Module Trade-offs")
+        lines.append("### 1. Head-to-Head Safety & Clinical Maturity")
+        names = " vs. ".join(f"**{c['pert_iname']}**" for c in cps)
+        lines.append(
+            f"Comparing {names}, **{hl.get('safest_kidney')}** exhibits the lowest predicted nephrotoxicity profile across NephroSafe T-DIKI v2 and FDA DIRIL."
+        )
+        lines.append("\n| Compound | pert_id | Phase | MoA | T-DIKI | DIRIL | ECM_fibrosis | Podocyte_slit |")
+        lines.append("|---|---|---|---|---|---|---|---|")
         for c in cps:
             rm = c.get("renal_modules") or {}
             lines.append(
-                f"- **{c['pert_iname']}**: ECM_fibrosis={_fmt_num(rm.get('ECM_fibrosis'), 2)}, "
-                f"TGFb_SMAD={_fmt_num(rm.get('TGFb_SMAD'), 2)}, "
-                f"Podocyte_slit={_fmt_num(rm.get('Podocyte_slit'), 2)}, PT_FAO_mito={_fmt_num(rm.get('PT_FAO_mito'), 2)}."
+                f"| {c['pert_iname']} | `{c['pert_id']}` | {c['clinical_phase']} | {c['moa']} | "
+                f"{c['tdiki_tier']} ({_fmt_num(c.get('tdiki_prob'), 3)}) | {_fmt_diril(c.get('diril_label'))} | "
+                f"{_fmt_num(rm.get('ECM_fibrosis'), 2)} | {_fmt_num(rm.get('Podocyte_slit'), 2)} |"
             )
-        _append_literature_section(lines, lits, trials, "### 3. Literature & Clinical Synthesis")
+        lines.append("\n### 2. Mechanistic & Renal Module Trade-offs")
+        mod_parts = [
+            f"**{c['pert_iname']}** shifts ECM_fibrosis={_fmt_num((c.get('renal_modules') or {}).get('ECM_fibrosis'), 2)}, "
+            f"TGFb_SMAD={_fmt_num((c.get('renal_modules') or {}).get('TGFb_SMAD'), 2)}, "
+            f"Podocyte_slit={_fmt_num((c.get('renal_modules') or {}).get('Podocyte_slit'), 2)}, and "
+            f"PT_FAO_mito={_fmt_num((c.get('renal_modules') or {}).get('PT_FAO_mito'), 2)}"
+            for c in cps
+        ]
+        lines.append(
+            "Across curated kidney pathology modules, " + "; ".join(mod_parts)
+            + f". Overall, **{hl.get('best_antifibrotic')}** provides the strongest anti-fibrotic transcriptional suppression while **{hl.get('best_podocyte_metabolic')}** best supports podocyte and mitochondrial FAO programs."
+        )
+        _append_literature_section(lines, lits, trials, "### 3. Integrated Literature & Clinical Review")
         lines.append("\n### 4. Context-Dependent Recommendation")
         lines.append(
-            f"- **Safest kidney profile**: **{hl.get('safest_kidney')}**; "
-            f"**strongest anti-fibrotic signature**: **{hl.get('best_antifibrotic')}**; "
-            f"**best podocyte/FAO support**: **{hl.get('best_podocyte_metabolic')}**."
+            f"Select **{hl.get('safest_kidney')}** when clinical kidney safety is the primary constraint, or prioritize **{hl.get('best_antifibrotic')}** for mechanistic anti-fibrotic validation with careful renal monitoring."
         )
         return "\n".join(lines).strip()
 
     if skill_id == "toxicity-rescue":
-        lines.append("### 1. NephroSafe Verdict & T-DIKI Drivers")
+        lines.append("### 1. NephroSafe Verdict & Attribution Rationale")
         if prof:
             contribs = ", ".join(
                 f"`{c['feature']}` ({c['contribution']:+})"
@@ -857,122 +971,111 @@ def _build_deterministic_synthesis(
                 if c.get("feature") and c.get("contribution") is not None
             )
             lines.append(
-                f"- **{prof.get('pert_iname')}** (`{prof.get('pert_id')}`, {prof.get('clinical_phase') or 'Preclinical'}, MoA `{prof.get('moa') or '—'}`): "
-                f"T-DIKI `{prof.get('tdiki_tier', 'NA')}` (p={_fmt_num(prof.get('tdiki_prob'), 3)}), "
-                f"DIRIL `{_fmt_diril(prof.get('diril_label'))}`."
-                + (f" Top T-DIKI drivers: {contribs}." if contribs else "")
+                f"**{prof.get('pert_iname')}** (`{prof.get('pert_id')}`, {prof.get('clinical_phase') or 'Preclinical'}, MoA: `{prof.get('moa') or '—'}`) "
+                f"carries a T-DIKI v2 risk tier of **{prof.get('tdiki_tier', 'NA')}** (p={_fmt_num(prof.get('tdiki_prob'), 3)}) with FDA DIRIL status **{_fmt_diril(prof.get('diril_label'))}**."
+                + (f" Attribution analysis highlights {contribs} as primary drivers of its predicted renal liability." if contribs else "")
             )
         lines.append("\n### 2. Safer Structural Analog Rescue")
-        for rf in reflections:
-            lines.append(f"- {rf}")
-        for idx, r in enumerate(rows[:3], 1):
-            lines.append(
-                f"- **#{idx} {r.get('pert_iname') or r.get('pert_id')}** (`{r.get('pert_id')}`, {r.get('clinical_phase') or 'Preclinical'}): "
-                f"Tanimoto={_fmt_num(r.get('tanimoto'), 3)}, T-DIKI `{r.get('tdiki_tier') or 'NA'}`, MoA `{_first_moa(r.get('moa'))}`."
-            )
-        _append_literature_section(lines, lits, trials, "### 3. Literature & Clinical Synthesis")
-        lines.append("\n### 4. Actionable Recommendation")
+        if reflections:
+            lines.append(" ".join(reflections))
+        if rows:
+            lines.append("\n| Rank | Analog | pert_id | Tanimoto | T-DIKI | MoA |")
+            lines.append("|---|---|---|---|---|---|")
+            for idx, r in enumerate(rows[:3], 1):
+                lines.append(
+                    f"| {idx} | {r.get('pert_iname') or r.get('pert_id')} | `{r.get('pert_id')}` | "
+                    f"{_fmt_num(r.get('tanimoto'), 3)} | {r.get('tdiki_tier') or 'NA'} | {_first_moa(r.get('moa'))} |"
+                )
+        _append_literature_section(lines, lits, trials, "### 3. Integrated Literature & Clinical Review")
+        lines.append("\n### 4. Translational Recommendation & Next Steps")
         top_safe = next((r for r in rows if r.get("tdiki_tier") == "Low" and r.get("diril_label") != 1), None)
         if top_safe:
             lines.append(
-                f"- Consider **{top_safe.get('pert_iname') or top_safe.get('pert_id')}** (`{top_safe.get('pert_id')}`, T-DIKI `Low`, Tanimoto={_fmt_num(top_safe.get('tanimoto'), 3)}) as a lower-risk structural alternative."
+                f"Evaluate **{top_safe.get('pert_iname') or top_safe.get('pert_id')}** (`{top_safe.get('pert_id')}`, T-DIKI `Low`, Tanimoto={_fmt_num(top_safe.get('tanimoto'), 3)}) as a structurally related lower-risk alternative."
             )
         else:
-            lines.append("- No `Low` T-DIKI structural analog was identified in the top 120 ECFP4 neighbors; consider switching scaffold class via signature or pathway screening.")
+            lines.append("No `Low` T-DIKI structural analog was found among the top 120 ECFP4 neighbors; scaffold hopping via signature or pathway reversal screening is recommended.")
         return "\n".join(lines).strip()
 
     if skill_id == "literature-evidence":
-        lines.append("### 1. Evidence Verdict & Novelty")
-        for lit in lits:
-            synth = lit.get("synthesis") or {}
-            lines.append(f"- **{lit.get('entity')}**: `{synth.get('verdict') or lit.get('evidence_tier')}` — {synth.get('novelty_note', '')}")
-        lines.append("\n### 2. Efficacy Literature Synthesis")
-        for lit in lits:
-            eff_pts = (lit.get("synthesis") or {}).get("efficacy_points") or []
-            if eff_pts:
-                for pt in eff_pts[:3]:
-                    pm = f" [PMID:{pt['pmid']}]" if pt.get("pmid") else ""
-                    lines.append(f"- **{lit.get('entity')}** ({pt.get('year')}, {pt.get('category')}): {pt.get('finding')}{pm}")
-            else:
-                lines.append(f"- **{lit.get('entity')}**: 0 kidney efficacy publications indexed (`Novel (0 renal papers)`).")
-        lines.append("\n### 3. Nephrotoxicity & Clinical Trials")
-        safety_found = False
-        for lit in lits:
-            for pt in ((lit.get("synthesis") or {}).get("safety_points") or [])[:2]:
-                safety_found = True
-                pm = f" [PMID:{pt['pmid']}]" if pt.get("pmid") else ""
-                lines.append(f"- **Safety ({lit.get('entity')})**: {pt.get('finding')}{pm}")
-        if not safety_found:
-            lines.append("- **Safety**: No nephrotoxicity warning papers extracted.")
-        if trials:
-            for tr_blk in trials:
-                trs = tr_blk.get("trials") or []
-                scope = f" ({tr_blk['scope_note']})" if tr_blk.get("scope_note") else ""
-                t_strs = [f"{'/'.join(t.get('phases') or ['N/A'])} {t.get('status')} — {t.get('title')} [{t['nct_id']}]" for t in trs[:2]]
-                lines.append(
-                    f"- **Clinical Trials ({tr_blk.get('compound')})**: {tr_blk.get('total_count', 0)} studies{scope}. "
-                    + (" ; ".join(t_strs) if t_strs else "None registered.")
-                )
-        else:
-            lines.append("- **Clinical Trials**: No trials queried in this turn.")
-        lines.append("\n### 4. Decision Takeaway")
-        lines.append("- All efficacy findings, nephrotoxicity reports, and NCT studies above are verified directly from live Europe PMC/PubMed & ClinicalTrials.gov records.")
+        lines.append("### 1. Executive Evidence Verdict & Novelty")
+        verdicts = [
+            f"**{lit.get('entity')}** maps to `{lit.get('evidence_tier')}` ({lit.get('efficacy_total_hits', 0)} renal efficacy hits, {lit.get('safety_total_hits', 0)} safety hits via {lit.get('provider')}; {(lit.get('synthesis') or {}).get('novelty_note', '')})"
+            for lit in lits
+        ]
+        lines.append(" ".join(verdicts) or "Completed literature audit.")
+        _append_literature_section(lines, lits, trials, "### 2. Synthesized Kidney Efficacy Literature")
+        lines.append("\n### 3. Integrated Nephrotoxicity & Clinical Trials Review")
+        tr_notes = []
+        for tr_blk in trials:
+            trs = tr_blk.get("trials") or []
+            t_list = "; ".join(f"{'/'.join(t.get('phases') or ['N/A'])} ({t.get('status')}) [{t['nct_id']}]" for t in trs[:3])
+            tr_notes.append(f"**{tr_blk.get('compound')}**: {tr_blk.get('total_count', 0)} registered kidney studies ({t_list or 'none'}).")
+        lines.append(" ".join(tr_notes) or "ClinicalTrials.gov returned no kidney studies for the audited entity.")
+        lines.append("\n### 4. Translational Takeaway")
+        lines.append("Synthesized findings above are verified directly against live Europe PMC/PubMed and ClinicalTrials.gov records; see the numbered References below for full citations.")
         return "\n".join(lines).strip()
 
-    # Default fixed template for disease-repurposing / target-to-lead / structure-moa-evidence
     sec_titles = {
         "target-to-lead": (
-            "### 1. Target Renal Expression & Direct Drugs",
+            "### 1. Target Nephron Biology & Direct Drugs",
             "### 2. Knockdown-Mimicking Leads & Safety",
-            "### 3. Literature & Clinical Synthesis",
-            "### 4. Actionable Recommendation",
+            "### 3. Integrated Literature & Clinical Review",
+            "### 4. Translational Recommendation & Next Steps",
         ),
         "structure-moa-evidence": (
-            "### 1. Structural Neighbors & Consensus MoA",
-            "### 2. Top Neighbor Safety & Kidney Profile",
-            "### 3. Literature & Clinical Synthesis",
-            "### 4. Actionable Recommendation",
+            "### 1. Chemical Neighborhood & Consensus MoA",
+            "### 2. Closest Neighbor Safety & Kidney Profile",
+            "### 3. Integrated Literature & Clinical Review",
+            "### 4. Translational Recommendation & Next Steps",
         ),
     }.get(
         skill_id,
         (
-            "### 1. Computational Screening & NephroSafe Audit",
-            "### 2. Mechanism of Top Safe Candidate",
-            "### 3. Literature & Clinical Synthesis",
-            "### 4. Actionable Recommendation",
+            "### 1. Executive Synthesis & Prioritized Candidates",
+            "### 2. Mechanistic & NephroSafe Rationale",
+            "### 3. Integrated Literature & Clinical Review",
+            "### 4. Translational Recommendation & Next Steps",
         ),
     )
 
     lines.append(sec_titles[0])
-    if facts:
-        lines.append("- " + " · ".join(f"{f['label']}: {f['value']}" for f in facts[:5]))
-    for rf in reflections:
-        lines.append(f"- *Reflection*: {rf}")
-    for idx, r in enumerate(rows[:3], 1):
-        nm = r.get("pert_iname") or r.get("pert_id")
-        score_part = (
-            f"RTPS={_fmt_num(r.get('rtps'), 1)}" if r.get("rtps") is not None
-            else f"Score={_fmt_num(r.get('pathway_tf_score'), 2)}" if r.get("pathway_tf_score") is not None
-            else f"Tanimoto={_fmt_num(r.get('tanimoto'), 3)}" if r.get("tanimoto") is not None
-            else f"Cosine={_fmt_num(r.get('similarity'), 3)}"
+    summary_intro = " · ".join(f"{f['label']}: {f['value']}" for f in facts[:4]) if facts else ""
+    ref_clause = (" " + " ".join(reflections)) if reflections else ""
+    lines.append(f"Deterministic screening completed ({summary_intro}).{ref_clause}".strip())
+    if rows:
+        score_lbl = (
+            "RTPS" if rows[0].get("rtps") is not None
+            else "Score" if rows[0].get("pathway_tf_score") is not None
+            else "Tanimoto" if rows[0].get("tanimoto") is not None
+            else "Cosine"
         )
-        lines.append(
-            f"- **#{idx} {nm}** (`{r.get('pert_id')}`, {r.get('clinical_phase') or 'Preclinical'}): "
-            f"{score_part}, T-DIKI `{r.get('tdiki_tier') or 'NA'}`, DIRIL `{_fmt_diril(r.get('diril_label'))}`."
-        )
+        lines.append(f"\n| Rank | Compound | pert_id | {score_lbl} | T-DIKI | DIRIL | Phase |")
+        lines.append("|---|---|---|---|---|---|---|")
+        for idx, r in enumerate(rows[:3], 1):
+            sc = (
+                _fmt_num(r.get("rtps"), 1) if r.get("rtps") is not None
+                else _fmt_num(r.get("pathway_tf_score"), 2) if r.get("pathway_tf_score") is not None
+                else _fmt_num(r.get("tanimoto"), 3) if r.get("tanimoto") is not None
+                else _fmt_num(r.get("similarity"), 3)
+            )
+            lines.append(
+                f"| {idx} | {r.get('pert_iname') or r.get('pert_id')} | `{r.get('pert_id')}` | {sc} | "
+                f"{r.get('tdiki_tier') or 'NA'} | {_fmt_diril(r.get('diril_label'))} | {r.get('clinical_phase') or 'Preclinical'} |"
+            )
 
     lines.append(f"\n{sec_titles[1]}")
     if prof:
-        pws = ", ".join(f"{k}={v}" for k, v in list((prof.get("top_progeny") or {}).items())[:4]) or "—"
-        mods = ", ".join(f"{k}={v}" for k, v in list((prof.get("top_renal_modules") or {}).items())[:3]) or "—"
-        tgs = ", ".join((prof.get("targets") or [])[:5]) or "—"
+        pws = ", ".join(f"{k} ({v})" for k, v in list((prof.get("top_progeny") or {}).items())[:4]) or "none"
+        mods = ", ".join(f"{k} ({v})" for k, v in list((prof.get("top_renal_modules") or {}).items())[:3]) or "none"
+        tgs = ", ".join((prof.get("targets") or [])[:5]) or "unannotated"
         lines.append(
-            f"- **{prof.get('pert_iname')}** (`{prof.get('pert_id')}`): MoA `{prof.get('moa') or '—'}`, "
-            f"T-DIKI `{prof.get('tdiki_tier', 'NA')}` (p={_fmt_num(prof.get('tdiki_prob'), 3)}), targets: {tgs}."
+            f"The top profiled candidate **{prof.get('pert_iname')}** (`{prof.get('pert_id')}`) acts via `{prof.get('moa') or 'unannotated MoA'}` "
+            f"(targets: {tgs}) with a NephroSafe T-DIKI tier of **{prof.get('tdiki_tier', 'NA')}** (p={_fmt_num(prof.get('tdiki_prob'), 3)}). "
+            f"In K-PRL kidney context, its strongest PROGENy pathway shifts are {pws}, alongside renal module activities in {mods}."
         )
-        lines.append(f"- PROGENy: {pws} | Renal modules: {mods}.")
     else:
-        lines.append("- Computational ranking completed; inspect ranked table and facts above.")
+        lines.append("Review the ranked candidates table and supporting evidence tabs below for detailed pathway and K-PRL metrics.")
 
     _append_literature_section(lines, lits, trials, sec_titles[2])
 
@@ -981,10 +1084,12 @@ def _build_deterministic_synthesis(
     if safe_cands:
         pid, nm = safe_cands[0]
         lit0 = next((l for l in lits if str(l.get("entity", "")).lower() == nm.lower()), None)
-        tier_note = f" (`{lit0['evidence_tier']}` evidence)" if lit0 else ""
-        lines.append(f"- Prioritize **{nm}** (`{pid}`){tier_note} for downstream validation and cross-compare against #2.")
+        tier_note = f" backed by `{lit0['evidence_tier']}` literature evidence" if lit0 else ""
+        lines.append(
+            f"Prioritize **{nm}** (`{pid}`){tier_note} for head-to-head comparison against #2 and targeted renal validation."
+        )
     else:
-        lines.append("- Review ranked hits and clinical/literature evidence tabs above before selecting leads.")
+        lines.append("Review the ranked candidates and verified References below to select leads for follow-up.")
 
     return "\n".join(lines).strip()
 
@@ -1694,6 +1799,7 @@ def execute_agent_stream(
     save_session(session_state)
 
     suggestions = _build_dynamic_suggestions(skill.id, session_state, artifacts)
+    references = _build_references(summary, artifacts)
     new_quota = check_llm_quota(client_ip)
 
     payload = {
@@ -1715,6 +1821,7 @@ def execute_agent_stream(
         "comparison": artifacts.get("comparison"),
         "literature": artifacts.get("literature") or [],
         "clinical_trials": artifacts.get("clinical_trials") or [],
+        "references": references,
         "links": artifacts.get("links") or [],
         "summary": summary,
         "verification": verification,

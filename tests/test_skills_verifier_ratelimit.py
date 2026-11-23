@@ -130,6 +130,12 @@ def test_literature_fallback_and_cache():
         os.environ["NEPHRO_STATE_DIR"] = tmp
         from app.engine import literature
 
+        # Verify Title/Abstract precision query syntax (no full-text mega-review CITED desc)
+        q_epmc = literature._build_epmc_query("dexamethasone", ["diabetic kidney disease"])
+        assert 'TITLE:"dexamethasone"' in q_epmc and 'ABSTRACT:"dexamethasone"' in q_epmc and "SRC:MED" in q_epmc, q_epmc
+        q_pm = literature._build_pubmed_query("dexamethasone", ["diabetic kidney disease"])
+        assert '"dexamethasone"[Title/Abstract]' in q_pm and '"diabetic kidney disease"[Title/Abstract]' in q_pm, q_pm
+
         # Verify _extract_takeaway prioritizes Conclusions/Results over opening Background
         bg_abs = (
             "BACKGROUND: Diabetic kidney disease causes end-stage renal failure worldwide and remains burdensome. "
@@ -159,7 +165,12 @@ def test_literature_fallback_and_cache():
                 ]
             },
         }
-        with mock.patch.object(literature, "_http_get", return_value=json.dumps(epmc_sample).encode()):
+        seen_urls = []
+        def capture_epmc(url, timeout=8.0):
+            seen_urls.append(url)
+            return json.dumps(epmc_sample).encode()
+
+        with mock.patch.object(literature, "_http_get", side_effect=capture_epmc):
             res1 = literature.search_kidney_literature("drugx", disease_context="DKD", include_safety=False)
             assert res1["provider"] == "europepmc"
             assert res1["evidence_tier"] == "Clinical"
@@ -167,6 +178,14 @@ def test_literature_fallback_and_cache():
             assert res1["papers"][0]["pmid"] == "11122233"
             assert "improved albuminuria" in res1["papers"][0]["takeaway"]
             assert res1.get("synthesis", {}).get("efficacy_points"), res1
+            assert seen_urls and "CITED" not in seen_urls[0] and "SRC%3AMED" in seen_urls[0], seen_urls
+
+        from app.react_agent import _build_references
+        refs = _build_references(
+            "Drug X improved albuminuria [PMID:11122233].",
+            {"literature": [res1], "clinical_trials": []},
+        )
+        assert len(refs) == 1 and refs[0]["pmid"] == "11122233" and refs[0]["cited_in_text"] is True, refs
 
         # Second call MUST hit SQLite cache without calling network
         with mock.patch.object(literature, "_http_get", side_effect=AssertionError("Should hit cache")):

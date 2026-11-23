@@ -13,27 +13,23 @@ allowed_tools:
   - search_clinical_trials
 requires_literature: true
 output_sections:
-  - "1. NephroSafe Verdict & T-DIKI Drivers"
+  - "1. NephroSafe Verdict & Attribution Rationale"
   - "2. Safer Structural Analog Rescue"
-  - "3. Literature & Clinical Synthesis"
-  - "4. Actionable Recommendation"
+  - "3. Integrated Literature & Clinical Review"
+  - "4. Translational Recommendation & Next Steps"
 example_prompt: "Is tacrolimus nephrotoxic? Explain its T-DIKI drivers, check nephrotoxicity literature, and find safer Low T-DIKI analogs"
 ---
 ## Execution Protocol
 1. Batch `profile_compound` + `explain_tdiki` for the target compound (prefer exact `pert_id` once resolved).
-2. If `tdiki_tier` is `High`/`Moderate`, `diril_label == 1`, or user requests alternatives, call `find_safe_analogs(compound=..., max_diki_tier="Low", top_k=10)`.
+2. If `tdiki_tier` is `High`/`Moderate`, `diril_label == 1`, or user requests safer alternatives, call `find_safe_analogs(compound=..., max_diki_tier="Low", top_k=10)`.
 3. Batch `search_literature(entity=<name>, include_safety=true)` + `search_clinical_trials` on the query compound.
 
-## Fixed Output Format (Use Exact Headings)
-### 1. NephroSafe Verdict & T-DIKI Drivers
-State `tdiki_tier`, `tdiki_prob`, `DIRIL` label, `tdiki_struct`/`tdiki_tx`, and top SHAP/attribution feature contributors.
+## Fixed Output Format (Cohesive Academic Prose — No Mechanical Bullet Listing)
+### 1. NephroSafe Verdict & Attribution Rationale
+Write one concise paragraph stating `tdiki_tier`, `tdiki_prob`, `DIRIL` status, `tdiki_struct`/`tdiki_tx`, and how the top attribution drivers and K-PRL gene shifts explain its renal risk.
 ### 2. Safer Structural Analog Rescue
-Report `safe_analogs_found` (or explicitly state if 0 `Low` T-DIKI analogs existed in top 120) and list Top-3 distinct neighbors with `pert_id`, Tanimoto, T-DIKI, and MoA.
-### 3. Literature & Clinical Synthesis
-Synthesize retrieved paper `takeaway`s into 4 concise bullets:
-- **Evidence Verdict**: tier plus efficacy vs. safety hit counts.
-- **Kidney Efficacy Findings**: key outcomes/mechanisms with `[PMID:<digits>]`.
-- **Nephrotoxicity Safety Audit**: documented renal toxicity mechanisms/warnings with `[PMID:<digits>]`.
-- **Clinical Trials**: relevant trial status/phases with `[NCT<8-digits>]` (or state 0 trials).
-### 4. Actionable Recommendation
-Concise safety guidance and whether a rescued analog is viable. Never invent PMIDs, NCTs, BRDs, or numbers.
+State clearly how many `Low` T-DIKI distinct analogs exist in the top 120 ECFP4 neighbors (explicitly note if 0), followed by a compact 3-row Markdown table (`Rank | Analog | pert_id | Tanimoto | T-DIKI | MoA`).
+### 3. Integrated Literature & Clinical Review
+Write **two cohesive prose paragraphs** synthesizing the retrieved paper `takeaway`s: Paragraph 1 contrasts renal benefit vs. documented nephrotoxicity mechanisms with inline `[PMID:<digits>]`; Paragraph 2 summarizes registered kidney trials (`[NCT<8-digits>]`, phase/status) and safety monitoring context.
+### 4. Translational Recommendation & Next Steps
+Write 2 crisp sentences advising on risk mitigation and whether a structural analog or scaffold switch is warranted. Do NOT write a manual References section (auto-appended). Never invent IDs or numbers.
