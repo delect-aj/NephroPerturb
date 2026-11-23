@@ -27,15 +27,6 @@ export default function ExampleCards() {
             <span className="badge blue" style={{ background: `${ex.color}18`, color: ex.color }}>
               {ex.sop}
             </span>
-            <span className="small muted">Click to fill</span>
-          </div>
-          <div className="example-title">{ex.title}</div>
-          <div className="example-sub">{ex.subtitle}</div>
-          <div className="example-prompt" title={ex.prompt}>
-            {ex.prompt}
-          </div>
-          <div className="example-foot">
-            <span className="small muted">Deterministic SOP</span>
             <button
               type="button"
               className="mini"
@@ -47,6 +38,11 @@ export default function ExampleCards() {
             >
               Run ▶
             </button>
+          </div>
+          <div className="example-title">{ex.title}</div>
+          <div className="example-sub">{ex.subtitle}</div>
+          <div className="example-prompt" title={ex.prompt}>
+            {ex.prompt}
           </div>
         </div>
       ))}

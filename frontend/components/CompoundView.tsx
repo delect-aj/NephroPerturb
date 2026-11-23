@@ -80,7 +80,9 @@ export default function CompoundView({ id }: { id: string }) {
           Ask Agent
         </button>
       </div>
-      <div className="sub">{c.moa || "No MoA annotation curated"}</div>
+      <div className="sub">
+        {c.moa ? `MoA: ${c.moa}` : "No MoA curated"} · {c.pert_id}
+      </div>
 
       <div className="grid cols-2">
         <div className="card">

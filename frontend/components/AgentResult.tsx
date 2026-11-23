@@ -27,8 +27,8 @@ export default function AgentResult({
   };
 
   return (
-    <div className="card" style={compact ? { padding: 12, boxShadow: "none" } : { marginTop: 18 }}>
-      <div className="row" style={{ gap: 8 }}>
+    <div className="card" style={compact ? { padding: 11, boxShadow: "none" } : { marginTop: 14 }}>
+      <div className="row" style={{ gap: 6 }}>
         <span className={`badge status-${result.status || "ok"}`}>
           {statusLabel[result.status] || result.status}
         </span>
@@ -38,7 +38,7 @@ export default function AgentResult({
           </span>
         )}
         <span className="badge grey">
-          {result.mode === "deepseek" ? "DeepSeek params" : "Rules · 0-LLM"}
+          {result.mode === "deepseek" ? "DeepSeek slots" : "0-LLM rules"}
         </span>
         <span className="spacer" />
         {result.elapsed_ms != null && (
@@ -53,7 +53,7 @@ export default function AgentResult({
               key={`${idx}-${s.name}`}
               className={`step ${s.status === "error" ? "step-error" : s.status === "skipped" ? "step-skipped" : ""}`}
             >
-              <div className="row" style={{ gap: 8 }}>
+              <div className="row" style={{ gap: 6 }}>
                 <strong>
                   {idx + 1}. {s.name}
                 </strong>
@@ -61,11 +61,7 @@ export default function AgentResult({
                 <span className="spacer" />
                 {s.ms != null && <span className="small muted mono">{s.ms} ms</span>}
               </div>
-              {s.detail && (
-                <div className="small muted" style={{ marginTop: 3 }}>
-                  {s.detail}
-                </div>
-              )}
+              {s.detail && <div className="small muted" style={{ marginTop: 2 }}>{s.detail}</div>}
             </div>
           ))}
         </div>
@@ -76,7 +72,7 @@ export default function AgentResult({
       {facts.length > 0 && (
         <div
           className={compact ? "grid" : "grid cols-4"}
-          style={{ marginTop: 12, gap: 10 }}
+          style={{ marginTop: 10, gap: 8 }}
         >
           {facts.map((f: any) => (
             <div
@@ -84,19 +80,19 @@ export default function AgentResult({
               style={{
                 background: "var(--panel-soft)",
                 border: "1px solid var(--line)",
-                borderRadius: 10,
-                padding: "8px 11px",
+                borderRadius: 8,
+                padding: "6px 10px",
               }}
             >
               <div className="small muted">{f.label}</div>
-              <div style={{ fontWeight: 600, fontSize: 13, marginTop: 2 }}>{f.value}</div>
+              <div style={{ fontWeight: 600, fontSize: 12.8, marginTop: 1 }}>{f.value}</div>
             </div>
           ))}
         </div>
       )}
 
       {cols.length > 0 && rows.length > 0 && (
-        <div className="scroll" style={{ marginTop: 14, maxHeight: compact ? 240 : 440 }}>
+        <div className="scroll" style={{ marginTop: 10, maxHeight: compact ? 230 : 420 }}>
           <table>
             <thead>
               <tr>
@@ -157,7 +153,7 @@ export default function AgentResult({
       )}
 
       {suggestions.length > 0 && onRunSuggestion && (
-        <div className="chip-row" style={{ marginTop: 12 }}>
+        <div className="chip-row" style={{ marginTop: 10 }}>
           <span className="small muted">Try:</span>
           {suggestions.map((s: string) => (
             <button
@@ -172,7 +168,7 @@ export default function AgentResult({
         </div>
       )}
 
-      <div className="row" style={{ marginTop: 12, gap: 8 }}>
+      <div className="row" style={{ marginTop: 10, gap: 8 }}>
         {links.map((lk: any) => (
           <Link key={lk.href} href={lk.href} prefetch={false}>
             <button type="button" className="ghost mini">
@@ -186,8 +182,8 @@ export default function AgentResult({
         )}
       </div>
 
-      <div className="small muted" style={{ marginTop: 10, borderTop: "1px solid var(--line)", paddingTop: 8 }}>
-        Deterministic: every score, count, and safety flag comes directly from the NephroPerturb scoring engine; no LLM reasoning.
+      <div className="small muted" style={{ marginTop: 8, borderTop: "1px solid var(--line)", paddingTop: 6 }}>
+        Grounded output: all scores and safety flags are computed deterministically without LLM reasoning.
       </div>
     </div>
   );

@@ -6,28 +6,28 @@ import AgentResult from "@/components/AgentResult";
 import ExampleCards from "@/components/ExampleCards";
 
 const STATS = [
-  ["21,299", "Small Molecules"],
+  ["21,299", "Compounds"],
   ["12,328", "L1000 Genes"],
-  ["591,697", "Level-5 Signatures"],
-  ["9,888", "InChIKey-14 Scaffolds"],
-  ["31,082", "Genetic Perturbations"],
+  ["591,697", "Level-5 Profiles"],
+  ["9,888", "IK-14 Scaffolds"],
+  ["31,082", "Genetic Perturbs"],
   ["725", "CollecTRI TFs"],
 ];
 
 const HOW_STEPS = [
-  ["Parse intent", "Rule router matches SOP-1..6 or optional DeepSeek extracts slot JSON."],
-  ["Map to SOP", "Resolves gene aliases, cohort IDs, compound names, or SMILES deterministically."],
-  ["Call fixed tool", "Executes the exact scoring, mimicry, or ECFP4 similarity engine endpoint."],
-  ["Safety & template", "Annotates High T-DIKI / DIRIL flags and builds a verified template summary."],
+  ["Intent Routing", "Rules map queries to SOP-1..6 or optional DeepSeek extracts JSON slots."],
+  ["Entity Resolution", "Resolves HGNC aliases, GEO cohort IDs, drug names, or SMILES."],
+  ["Tool Execution", "Runs exact scoring, knockdown mimicry, or ECFP4 similarity tools."],
+  ["NephroSafe Audit", "Flags High T-DIKI / DIRIL candidates and emits a grounded template."],
 ];
 
 const EXPLORE_TILES = [
-  ["/workbench", "Signature Workbench", "Multi-scale WTCS, XSum, Zhang & functional reversal with 4D RenalConn weighting."],
-  ["/pathway-tf", "Pathway & TF Search", "Query precomputed PROGENy, CollecTRI & renal pathology activity matrices."],
-  ["/target/?symbol=TGFBR1", "Target & Genetics", "Single-cell kidney expression, targeting drugs, and LINCS knockdown mimicry."],
+  ["/workbench", "Signature Workbench", "Multi-scale WTCS, XSum, Zhang & functional reversal with RenalConn weighting."],
+  ["/pathway-tf", "Pathway & TF Search", "Query precomputed PROGENy, CollecTRI & renal pathology activity."],
+  ["/target/?symbol=TGFBR1", "Target & Genetics", "Nephron compartment expression, targeting drugs & knockdown mimicry."],
   ["/compound/?id=dexamethasone", "Compound Explorer", "2D structure, K-PRL signature, T-DIKI v2 attribution & scaffold siblings."],
-  ["/structure/?q=CC(%3DO)OC1%3DCC%3DCC%3DC1C(%3DO)O", "Structure Search", "ECFP4 2048-bit Tanimoto scan & MoA inference from SMILES or drug IDs."],
-  ["/cases", "Disease Cohorts", "10 QC'd human kidney biopsy cohorts across DKD, LN, IgAN, CKD, and AKI."],
+  ["/structure/?q=CC(%3DO)OC1%3DCC%3DCC%3DC1C(%3DO)O", "Structure Search", "2048-bit ECFP4 Tanimoto search & MoA inference from SMILES or ID."],
+  ["/cases", "Disease Cohorts", "10 QC-validated human kidney biopsy cohorts across DKD, LN, IgAN, CKD & AKI."],
 ];
 
 export default function Home() {
@@ -66,15 +66,15 @@ export default function Home() {
       <section className="hero" ref={heroRef} id="agent-console">
         <div>
           <span className="hero-kicker">Deterministic SOP Engine · Zero Hallucination</span>
-          <h1>NephroAgent — deterministic kidney drug-repurposing assistant</h1>
-          <div className="muted" style={{ fontSize: 13.5 }}>
-            No open-ended AI guessing: rules map your question directly to 6 pre-validated SOP tools and template summaries.
+          <h1>NephroAgent</h1>
+          <div className="muted" style={{ fontSize: 13 }}>
+            Rule-governed kidney drug-repurposing assistant backed by K-PRL signatures and NephroSafe guardrails.
           </div>
 
           <div className="agent-box">
             <textarea
               ref={consoleRef}
-              placeholder="Ask in plain English or Chinese, e.g. Find reversal drugs for the DKD glomeruli case"
+              placeholder="Query cohorts, gene signatures, pathways, targets, compounds, or SMILES..."
               value={prompt}
               onChange={(e) => setPrompt(e.target.value)}
               onKeyDown={(e) => {
@@ -87,7 +87,7 @@ export default function Home() {
             <div className="agent-box-bar">
               <button type="button" onClick={() => run()} disabled={loading}>
                 {loading && <span className="spinner" />}
-                {loading ? "Executing SOP..." : "Run Agent"}
+                {loading ? "Executing..." : "Run Agent"}
               </button>
               <button
                 type="button"
@@ -102,19 +102,19 @@ export default function Home() {
               <span className="spacer" />
               <label
                 className="small"
-                style={{ margin: 0, display: "flex", alignItems: "center", gap: 6 }}
+                style={{ margin: 0, display: "flex", alignItems: "center", gap: 5 }}
               >
                 <input
                   type="checkbox"
                   checked={useLLM}
                   onChange={(e) => setUseLLM(e.target.checked)}
                 />
-                Use DeepSeek for parameter extraction (requires API key)
+                DeepSeek slot parser (optional)
               </label>
             </div>
           </div>
           {error && (
-            <div className="small" style={{ color: "var(--bad)", marginTop: 8 }}>
+            <div className="small" style={{ color: "var(--bad)", marginTop: 6 }}>
               {error}
             </div>
           )}
@@ -123,7 +123,7 @@ export default function Home() {
         <div style={{ display: "flex", justifyContent: "center" }}>
           <img
             src="/hero.svg"
-            alt="NephroPerturb kidney perturbation network illustration"
+            alt="NephroPerturb kidney perturbation network"
             width={440}
             height={289}
             className="hero-art"
@@ -131,23 +131,30 @@ export default function Home() {
         </div>
       </section>
 
+      <div className="grid cols-6" style={{ marginBottom: 12 }}>
+        {STATS.map(([v, l]) => (
+          <div className="card kpi-card" key={l}>
+            <div className="stat">{v}</div>
+            <div className="stat-label">{l}</div>
+          </div>
+        ))}
+      </div>
+
       <div className="how-strip">
         {HOW_STEPS.map(([title, desc], idx) => (
           <div className="how-step" key={title}>
             <div className="how-num">{idx + 1}</div>
             <div>
-              <div style={{ fontWeight: 700, fontSize: 13 }}>{title}</div>
+              <div style={{ fontWeight: 700, fontSize: 12.5 }}>{title}</div>
               <div className="small muted">{desc}</div>
             </div>
           </div>
         ))}
       </div>
 
-      <div style={{ marginBottom: 8 }} className="row">
-        <h2 style={{ margin: 0, fontSize: 16 }}>Try an example</h2>
-        <span className="small muted">
-          Click any card to fill the Agent console, or press Run ▶ to execute immediately
-        </span>
+      <div className="row" style={{ marginBottom: 8 }}>
+        <h2 style={{ margin: 0, fontSize: 15 }}>Showcase Queries</h2>
+        <span className="small muted">Click card to prefill, or Run ▶ to execute immediately</span>
       </div>
       <ExampleCards />
 
@@ -155,17 +162,8 @@ export default function Home() {
         <AgentResult result={result} onRunSuggestion={(s) => run(s)} />
       </div>
 
-      <div className="grid cols-3" style={{ marginTop: 22 }}>
-        {STATS.map(([v, l]) => (
-          <div className="card" key={l}>
-            <div className="stat">{v}</div>
-            <div className="stat-label">{l}</div>
-          </div>
-        ))}
-      </div>
-
-      <div className="card" style={{ marginTop: 18 }}>
-        <h2>Explore the knowledge base</h2>
+      <div className="card" style={{ marginTop: 14 }}>
+        <h2>Knowledge Base Modules</h2>
         <div className="grid cols-3">
           {EXPLORE_TILES.map(([href, title, desc]) => (
             <Link
@@ -174,14 +172,14 @@ export default function Home() {
               prefetch={false}
               style={{
                 display: "block",
-                padding: 12,
-                borderRadius: 10,
+                padding: 10,
+                borderRadius: 8,
                 border: "1px solid var(--line)",
                 background: "var(--panel-soft)",
                 color: "var(--ink)",
               }}
             >
-              <div style={{ fontWeight: 700, color: "var(--accent)", marginBottom: 4 }}>
+              <div style={{ fontWeight: 700, color: "var(--accent)", fontSize: 13, marginBottom: 2 }}>
                 {title} →
               </div>
               <div className="small muted">{desc}</div>

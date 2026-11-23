@@ -29,7 +29,11 @@ export default function CasesPage() {
     setData(null);
     setActive(caseId);
     try {
-      const payload = await apiJson(`/api/v1/cases/${encodeURIComponent(caseId)}`, undefined, 45000);
+      const payload = await apiJson(
+        `/api/v1/cases/${encodeURIComponent(caseId)}`,
+        undefined,
+        45000
+      );
       setData(payload);
     } catch (e: any) {
       setError(`Failed to run ${caseId}: ${String(e.message || e)}`);
@@ -44,14 +48,14 @@ export default function CasesPage() {
         <h1>Disease Cohorts</h1>
       </div>
       <div className="sub">
-        Real human kidney biopsy cohorts (GEO series matrix, QC&apos;d for sample size, LINCS gene coverage, and positive pathway recovery), with full accession and SHA256 provenance.
+        10 QC-validated human kidney biopsy cohorts (GEO) with accession and SHA-256 provenance.
       </div>
 
       {error && (
         <div
           className="card"
           style={{
-            marginBottom: 16,
+            marginBottom: 12,
             borderColor: "#fca5a5",
             background: "#fef2f2",
             color: "var(--bad)",
@@ -61,35 +65,38 @@ export default function CasesPage() {
         </div>
       )}
 
-      <div className="grid cols-3">
+      <div className="grid cols-2">
         {cases.map((c) => (
-          <div className="card" key={c.case_id}>
-            <h2>
-              {c.case_id} · {c.disease_name}
-            </h2>
-            <div className="small muted">
-              Comparison: {c.compartment} · {c.gse || c.dataset_accession} · {c.platform || "—"}
-            </div>
-            <div className="small muted">
-              Disease n={c.n_disease ?? "—"} vs Control n={c.n_control ?? "—"} · PMID{" "}
-              {c.pmid || "—"}
-            </div>
-            {c.matrix_sha256 && (
-              <div className="small muted mono">
-                sha256 {String(c.matrix_sha256).slice(0, 16)}…
+          <div className="card cohort-card" key={c.case_id}>
+            <div className="cohort-meta">
+              <div className="row" style={{ gap: 6, marginBottom: 3 }}>
+                <strong style={{ fontSize: 14 }}>{c.case_id}</strong>
+                <span className="badge blue">{c.disease_name}</span>
+                <span className="badge grey mono">{c.gse || c.dataset_accession}</span>
               </div>
-            )}
-            <div className="row" style={{ marginTop: 12 }}>
-              <button type="button" onClick={() => run(c.case_id)} disabled={loading}>
+              <div className="small muted">{c.compartment}</div>
+              <div className="small muted">
+                n={c.n_disease ?? "—"} disease / {c.n_control ?? "—"} control · {c.platform || "—"} · PMID{" "}
+                {c.pmid || "—"}
+                {c.matrix_sha256 ? ` · sha256 ${String(c.matrix_sha256).slice(0, 12)}…` : ""}
+              </div>
+            </div>
+            <div className="cohort-actions">
+              <button
+                type="button"
+                className="mini"
+                onClick={() => run(c.case_id)}
+                disabled={loading}
+              >
                 {loading && active === c.case_id && <span className="spinner" />}
-                {loading && active === c.case_id ? "Running..." : "Run reversal"}
+                {loading && active === c.case_id ? "Running..." : "Run"}
               </button>
               <button
                 type="button"
-                className="ghost"
+                className="ghost mini"
                 onClick={() => fill(`Run the ${c.case_id} case`)}
               >
-                Ask Agent
+                Agent
               </button>
             </div>
           </div>
@@ -97,13 +104,13 @@ export default function CasesPage() {
       </div>
 
       {data && (
-        <div className="card" style={{ marginTop: 18 }}>
+        <div className="card" style={{ marginTop: 14 }}>
           <div className="row">
-            <h2 style={{ margin: 0 }}>{active} Candidate Drugs</h2>
+            <h2 style={{ margin: 0 }}>{active} Candidate Drugs ({data.results?.length || 0})</h2>
             <span className="spacer" />
             <span className="small muted mono">job {data.job_id}</span>
           </div>
-          <div className="scroll" style={{ marginTop: 12 }}>
+          <div className="scroll" style={{ marginTop: 8 }}>
             <table>
               <thead>
                 <tr>

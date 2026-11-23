@@ -13,19 +13,6 @@ export default function PathwayTF() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
-  useEffect(() => {
-    const raw = new URLSearchParams(window.location.search).get("targets");
-    if (!raw) return;
-    const parsed = raw
-      .split(",")
-      .map((pair) => {
-        const [name, d] = pair.split(":");
-        return name ? { name: name.trim(), dir: Number(d) < 0 ? -1 : 1 } : null;
-      })
-      .filter(Boolean) as { name: string; dir: number }[];
-    if (parsed.length) setRows(parsed);
-  }, []);
-
   async function run(customRows?: { name: string; dir: number }[]) {
     const useRows = customRows || rows;
     setLoading(true);
@@ -48,16 +35,35 @@ export default function PathwayTF() {
     }
   }
 
+  useEffect(() => {
+    const raw = new URLSearchParams(window.location.search).get("targets");
+    if (raw) {
+      const parsed = raw
+        .split(",")
+        .map((pair) => {
+          const [name, d] = pair.split(":");
+          return name ? { name: name.trim(), dir: Number(d) < 0 ? -1 : 1 } : null;
+        })
+        .filter(Boolean) as { name: string; dir: number }[];
+      if (parsed.length) {
+        setRows(parsed);
+        run(parsed);
+        return;
+      }
+    }
+    run(PATHWAY_PRESETS[0].rows);
+  }, []);
+
   return (
     <>
       <div className="page-head">
-        <h1>Pathway & TF Search</h1>
+        <h1>Pathway &amp; TF Search</h1>
       </div>
       <div className="sub">
-        Query precomputed drug-induced functional activity matrices across PROGENy pathways, CollecTRI TFs, and curated renal pathology modules.
+        Screen compounds against precomputed PROGENy pathways, CollecTRI TFs, and curated renal modules.
       </div>
 
-      <div className="chip-row" style={{ marginBottom: 14 }}>
+      <div className="chip-row" style={{ marginBottom: 10 }}>
         <span className="small muted">Presets:</span>
         {PATHWAY_PRESETS.map((p) => (
           <button
@@ -77,19 +83,19 @@ export default function PathwayTF() {
       <div className="card">
         <h2>Target Regulatory Combination</h2>
         {rows.map((row, i) => (
-          <div className="row" key={i} style={{ marginBottom: 8 }}>
+          <div className="row" key={i} style={{ marginBottom: 6 }}>
             <input
               type="text"
               style={{ flex: 1, minWidth: 200 }}
               value={row.name}
-              placeholder="Pathway, TF, or renal module (e.g., TGFb, SMAD3, NFkB)"
+              placeholder="Pathway, TF, or renal module (e.g. TGFb, SMAD3, NFkB)"
               onChange={(e) =>
                 setRows(rows.map((r, j) => (j === i ? { ...r, name: e.target.value } : r)))
               }
             />
             <select
               value={row.dir}
-              style={{ width: 150 }}
+              style={{ width: 145 }}
               onChange={(e) =>
                 setRows(rows.map((r, j) => (j === i ? { ...r, dir: Number(e.target.value) } : r)))
               }
@@ -99,20 +105,20 @@ export default function PathwayTF() {
             </select>
             <button
               type="button"
-              className="ghost"
+              className="ghost mini"
               onClick={() => setRows(rows.filter((_, j) => j !== i))}
             >
               Remove
             </button>
           </div>
         ))}
-        <div className="row" style={{ marginTop: 10 }}>
+        <div className="row" style={{ marginTop: 8 }}>
           <button
             type="button"
             className="ghost"
             onClick={() => setRows([...rows, { name: "", dir: -1 }])}
           >
-            Add target
+            + Add target
           </button>
           <button type="button" onClick={() => run()} disabled={loading}>
             {loading && <span className="spinner" />}
@@ -132,8 +138,8 @@ export default function PathwayTF() {
           </button>
         </div>
 
-        <div className="small muted" style={{ marginTop: 12, lineHeight: 1.6 }}>
-          <strong>Valid identifiers:</strong> PROGENy (<span className="mono">TGFb, NFkB, JAK-STAT, Hypoxia, MAPK, EGFR, PI3K, TNFa, VEGF, WNT, p53</span>) · CollecTRI TFs (<span className="mono">SMAD3, SMAD4, PPARA, PPARG, STAT1, NFKB1, RELA, HIF1A</span>) · Renal modules (<span className="mono">PT_FAO_mito, Podocyte_slit, ECM_fibrosis, Complement, Ferroptosis_pyroptosis, ER_stress_UPR, RAAS, Tubular_injury_KIM1, Inflammation_NFkB, TGFb_SMAD, Apoptosis_p53, Autophagy</span>)
+        <div className="small muted" style={{ marginTop: 10 }}>
+          <strong>Valid IDs:</strong> PROGENy (<span className="mono">TGFb, NFkB, JAK-STAT, Hypoxia, MAPK, EGFR, PI3K, TNFa, VEGF, WNT, p53</span>) · CollecTRI TFs (<span className="mono">SMAD3, SMAD4, PPARA, PPARG, STAT1, NFKB1, RELA, HIF1A</span>) · Renal modules (<span className="mono">PT_FAO_mito, Podocyte_slit, ECM_fibrosis, Complement, Ferroptosis_pyroptosis, ER_stress_UPR, RAAS, Tubular_injury_KIM1, Inflammation_NFkB, TGFb_SMAD, Apoptosis_p53, Autophagy</span>)
         </div>
 
         {error && (
@@ -144,7 +150,7 @@ export default function PathwayTF() {
       </div>
 
       {data && (
-        <div className="card" style={{ marginTop: 16 }}>
+        <div className="card" style={{ marginTop: 12 }}>
           <div className="row">
             <h2 style={{ margin: 0 }}>Candidate Drugs ({data.results?.length || 0})</h2>
             <span className="spacer" />
@@ -152,7 +158,7 @@ export default function PathwayTF() {
               Matched {data.used?.length || 0} · Unrecognized {(data.missing || []).join(", ") || "None"}
             </span>
           </div>
-          <div className="scroll" style={{ marginTop: 10 }}>
+          <div className="scroll" style={{ marginTop: 8 }}>
             <table>
               <thead>
                 <tr>

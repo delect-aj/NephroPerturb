@@ -65,7 +65,7 @@ export default function TargetView({ symbol }: { symbol: string }) {
           Ask Agent
         </button>
       </div>
-      <div className="sub">{data.gene.title}</div>
+      <div className="sub">{data.gene.title || `Target ${data.gene.symbol}`}</div>
 
       <div className="grid cols-2">
         <div className="card">

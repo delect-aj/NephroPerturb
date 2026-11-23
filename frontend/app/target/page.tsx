@@ -3,6 +3,8 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import TargetView from "@/components/TargetView";
 
+const TARGET_PRESETS = ["TGFBR1", "APOL1", "HAVCR1", "JAK2", "SMAD3", "NPHS1", "PPARA"];
+
 export default function TargetIndex() {
   const [gene, setGene] = useState("TGFBR1");
   const [active, setActive] = useState("");
@@ -10,9 +12,9 @@ export default function TargetIndex() {
 
   useEffect(() => {
     const sync = () => {
-      const sym = new URLSearchParams(window.location.search).get("symbol") || "";
+      const sym = new URLSearchParams(window.location.search).get("symbol") || "TGFBR1";
       setActive(sym);
-      if (sym) setGene(sym);
+      setGene(sym);
     };
     sync();
     window.addEventListener("popstate", sync);
@@ -33,15 +35,15 @@ export default function TargetIndex() {
         <h1>Target & Genetics</h1>
       </div>
       <div className="sub">
-        Inspect nephron compartment expression, direct targeting drugs, and small molecules mimicking genetic knockdown.
+        Nephron compartment expression, direct targeting drugs, and genetic knockdown mimicry.
       </div>
-      <div className="card" style={{ maxWidth: 680, marginBottom: 18 }}>
-        <label>Human gene symbol</label>
+      <div className="card" style={{ marginBottom: 14 }}>
         <div className="row">
           <input
             type="text"
+            style={{ flex: 1, minWidth: 200 }}
             value={gene}
-            placeholder="e.g. TGFBR1, APOL1, HAVCR1"
+            placeholder="Human gene symbol (e.g. TGFBR1, APOL1, HAVCR1)"
             onChange={(e) => setGene(e.target.value)}
             onKeyDown={(e) => {
               if (e.key === "Enter") go(gene);
@@ -50,14 +52,13 @@ export default function TargetIndex() {
           <button type="button" onClick={() => go(gene)}>
             Search
           </button>
-        </div>
-        <div className="chip-row" style={{ marginTop: 12 }}>
-          <span className="small muted">Examples:</span>
-          {["TGFBR1", "APOL1", "HAVCR1", "JAK2", "SMAD3", "NPHS1", "PPARA"].map((g) => (
-            <button key={g} type="button" className="chip" onClick={() => go(g)}>
-              {g}
-            </button>
-          ))}
+          <div className="chip-row">
+            {TARGET_PRESETS.map((g) => (
+              <button key={g} type="button" className="chip" onClick={() => go(g)}>
+                {g}
+              </button>
+            ))}
+          </div>
         </div>
       </div>
       {active ? <TargetView symbol={active} /> : null}

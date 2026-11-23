@@ -32,11 +32,7 @@ export default function AgentDrawer() {
 
   if (!open) {
     return (
-      <button
-        type="button"
-        className="agent-pill"
-        onClick={() => setOpen(true)}
-      >
+      <button type="button" className="agent-pill" onClick={() => setOpen(true)}>
         Ask NephroAgent
       </button>
     );
@@ -45,7 +41,7 @@ export default function AgentDrawer() {
   return (
     <div className="agent-drawer">
       <header>
-        <span>NephroAgent · Deterministic Runner</span>
+        <span>NephroAgent</span>
         <span className="spacer" />
         <span className="small" style={{ opacity: 0.85 }}>
           {useLLM ? "DeepSeek slots" : "0-LLM rules"}
@@ -53,7 +49,7 @@ export default function AgentDrawer() {
         <button
           type="button"
           className="mini ghost"
-          style={{ marginLeft: 8, background: "rgba(255,255,255,0.16)", color: "#fff" }}
+          style={{ marginLeft: 6, background: "rgba(255,255,255,0.16)", color: "#fff" }}
           onClick={() => setOpen(false)}
         >
           Minimize
@@ -62,8 +58,8 @@ export default function AgentDrawer() {
       <div className="body">
         <textarea
           ref={boxRef}
-          style={{ minHeight: 72 }}
-          placeholder="Ask e.g. Find reversal drugs for the DKD glomeruli case..."
+          style={{ minHeight: 62 }}
+          placeholder="Ask about cohorts, genes, pathways, drugs, or SMILES..."
           value={prompt}
           onChange={(e) => setPrompt(e.target.value)}
           onKeyDown={(e) => {
@@ -73,7 +69,7 @@ export default function AgentDrawer() {
             }
           }}
         />
-        <div className="chip-row" style={{ marginTop: 8 }}>
+        <div className="chip-row" style={{ marginTop: 6 }}>
           {AGENT_EXAMPLES.slice(0, 3).map((ex) => (
             <button
               key={ex.id}
@@ -85,14 +81,14 @@ export default function AgentDrawer() {
             </button>
           ))}
         </div>
-        <div className="row" style={{ marginTop: 10 }}>
+        <div className="row" style={{ marginTop: 8 }}>
           <label className="small" style={{ margin: 0, display: "flex", alignItems: "center", gap: 5 }}>
             <input
               type="checkbox"
               checked={useLLM}
               onChange={(e) => setUseLLM(e.target.checked)}
             />
-            DeepSeek slots
+            DeepSeek slot parser
           </label>
           <span className="spacer" />
           <button type="button" onClick={() => run()} disabled={loading}>
@@ -108,12 +104,8 @@ export default function AgentDrawer() {
         )}
 
         {result && (
-          <div style={{ marginTop: 10 }}>
-            <AgentResult
-              result={result}
-              compact
-              onRunSuggestion={(s) => run(s)}
-            />
+          <div style={{ marginTop: 8 }}>
+            <AgentResult result={result} compact onRunSuggestion={(s) => run(s)} />
           </div>
         )}
       </div>

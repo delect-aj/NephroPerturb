@@ -77,7 +77,7 @@ class _SelectiveGZipAndCacheMiddleware:
         await self.gzip_app(scope, receive, send_with_cache)
 
 
-app = FastAPI(title="NephroPerturb API", version="1.1.1", lifespan=lifespan)
+app = FastAPI(title="NephroPerturb API", version="1.1.2", lifespan=lifespan)
 app.add_middleware(_SelectiveGZipAndCacheMiddleware)
 app.add_middleware(CORSMiddleware, allow_origins=["*"], allow_methods=["*"],
                    allow_headers=["*"])
@@ -145,7 +145,7 @@ class SummarizeRequest(BaseModel):
 def health():
     store = get_store()
     return {"status": "ok",
-            "version": "1.1.1",
+            "version": "1.1.2",
             "mode": "lite" if store.is_lite else "full",
             "mcp_mounted": _MOUNT_MCP,
             "compounds": int(len(store.cp_index)),

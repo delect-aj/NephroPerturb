@@ -122,9 +122,7 @@ export default function Nav() {
           Nephro<span>Perturb</span>
         </div>
       </div>
-      <div className="tagline">
-        Kidney drug-perturbation knowledge base · 21,299 compounds · 12,328 genes
-      </div>
+      <div className="tagline">Kidney perturbation knowledge base</div>
       <nav className="nav">
         {LINKS.map(([href, label, icon]) => (
           <Link
@@ -142,7 +140,7 @@ export default function Nav() {
         <span className={`status-dot ${health ? "online" : ""}`} />
         <span>
           {health
-            ? `v${health.version || "1.1.0"} · ${health.mode === "lite" ? "Lite 1-core" : "Full mode"}`
+            ? `v${health.version || "1.1.2"} · ${health.mode === "lite" ? "Lite (1-core)" : "Full"}`
             : offline
             ? "API offline"
             : "Connecting..."}

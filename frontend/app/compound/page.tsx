@@ -11,9 +11,9 @@ export default function CompoundIndexPage() {
 
   useEffect(() => {
     const sync = () => {
-      const q = new URLSearchParams(window.location.search).get("id") || "";
+      const q = new URLSearchParams(window.location.search).get("id") || "dexamethasone";
       setActive(q);
-      if (q) setQuery(q);
+      setQuery(q);
     };
     sync();
     window.addEventListener("popstate", sync);
@@ -34,15 +34,15 @@ export default function CompoundIndexPage() {
         <h1>Compound Explorer</h1>
       </div>
       <div className="sub">
-        Look up any compound by name, BRD ID, or InChIKey across 21,299 LINCS perturbations and T-DIKI v2 safety annotations.
+        2D structure, K-PRL signature, T-DIKI v2 risk attribution, and scaffold siblings.
       </div>
-      <div className="card" style={{ maxWidth: 680, marginBottom: 18 }}>
-        <label>Compound name, BRD ID, or InChIKey</label>
+      <div className="card" style={{ marginBottom: 14 }}>
         <div className="row">
           <input
             type="text"
+            style={{ flex: 1, minWidth: 220 }}
             value={query}
-            placeholder="e.g. dexamethasone, BRD-A10188456, or losartan"
+            placeholder="Compound name, BRD ID, or InChIKey (e.g. dexamethasone, BRD-A10188456)"
             onChange={(e) => setQuery(e.target.value)}
             onKeyDown={(e) => {
               if (e.key === "Enter") go(query);
@@ -51,14 +51,13 @@ export default function CompoundIndexPage() {
           <button type="button" onClick={() => go(query)}>
             Search
           </button>
-        </div>
-        <div className="chip-row" style={{ marginTop: 12 }}>
-          <span className="small muted">Examples:</span>
-          {COMPOUND_PRESETS.map((c) => (
-            <button key={c} type="button" className="chip" onClick={() => go(c)}>
-              {c}
-            </button>
-          ))}
+          <div className="chip-row">
+            {COMPOUND_PRESETS.map((c) => (
+              <button key={c} type="button" className="chip" onClick={() => go(c)}>
+                {c}
+              </button>
+            ))}
+          </div>
         </div>
       </div>
       {active ? <CompoundView id={active} /> : null}

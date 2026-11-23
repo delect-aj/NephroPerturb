@@ -28,7 +28,6 @@ export default function StructureSearchPage() {
     if (inputStr !== undefined) setQuery(clean);
     setLoading(true);
     setError("");
-    setResults([]);
     setResolvedLabel("");
 
     try {
@@ -60,9 +59,53 @@ export default function StructureSearchPage() {
   }
 
   useEffect(() => {
-    const q = new URLSearchParams(window.location.search).get("q");
-    if (q) runSearch(q);
+    const q = new URLSearchParams(window.location.search).get("q") || STRUCTURE_PRESETS[0].query;
+    runSearch(q);
   }, []);
+
+  const tableCard = results.length > 0 && (
+    <div className="card">
+      <div className="row">
+        <h2 style={{ margin: 0 }}>Structural Neighbors ({results.length})</h2>
+        <span className="spacer" />
+        {resolvedLabel && <span className="badge grey">{resolvedLabel}</span>}
+      </div>
+      <div className="scroll" style={{ marginTop: 10 }}>
+        <table>
+          <thead>
+            <tr>
+              <th>#</th>
+              <th>Compound</th>
+              <th>ECFP4 Tanimoto</th>
+              <th>MoA</th>
+              <th>Phase</th>
+            </tr>
+          </thead>
+          <tbody>
+            {results.map((r: any, i: number) => (
+              <tr key={r.pert_id}>
+                <td className="mono muted">{i + 1}</td>
+                <td>
+                  <Link
+                    href={`/compound/?id=${encodeURIComponent(r.pert_id)}`}
+                    prefetch={false}
+                  >
+                    {r.pert_iname || r.pert_id}
+                  </Link>
+                  <div className="small muted mono">{r.pert_id}</div>
+                </td>
+                <td>
+                  <TanimotoBar value={r.tanimoto} />
+                </td>
+                <td className="small">{r.moa || "—"}</td>
+                <td className="small">{r.clinical_phase || "—"}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  );
 
   return (
     <>
@@ -70,16 +113,16 @@ export default function StructureSearchPage() {
         <h1>Structure Search & MoA Inference</h1>
       </div>
       <div className="sub">
-        Search 21,299 compounds by 2048-bit Morgan ECFP4 Tanimoto similarity using a SMILES string, drug name, or BRD ID.
+        2048-bit Morgan ECFP4 Tanimoto search and MoA inference from SMILES or compound IDs.
       </div>
 
-      <div className="card" style={{ marginBottom: 18 }}>
-        <label>SMILES string, compound name, or BRD ID</label>
+      <div className="card" style={{ marginBottom: 12 }}>
         <div className="row">
           <input
             type="text"
+            style={{ flex: 1, minWidth: 240 }}
             value={query}
-            placeholder="e.g. CC(=O)OC1=CC=CC=C1C(=O)O or dexamethasone"
+            placeholder="SMILES string, compound name, or BRD ID..."
             onChange={(e) => setQuery(e.target.value)}
             onKeyDown={(e) => {
               if (e.key === "Enter") runSearch();
@@ -98,7 +141,7 @@ export default function StructureSearchPage() {
           </button>
         </div>
 
-        <div className="chip-row" style={{ marginTop: 12 }}>
+        <div className="chip-row" style={{ marginTop: 8 }}>
           <span className="small muted">Examples:</span>
           {STRUCTURE_PRESETS.map((p) => (
             <button
@@ -113,61 +156,30 @@ export default function StructureSearchPage() {
         </div>
 
         {error && (
-          <div className="small" style={{ color: "var(--bad)", marginTop: 10 }}>
+          <div className="small" style={{ color: "var(--bad)", marginTop: 8 }}>
             {error}
           </div>
         )}
       </div>
 
-      {querySmiles && (
-        <div className="card" style={{ marginBottom: 18, maxWidth: 440 }}>
-          <h2>Query 2D Structure</h2>
-          <Structure smiles={querySmiles} />
-        </div>
-      )}
-
-      {results.length > 0 && (
-        <div className="card">
-          <div className="row">
-            <h2 style={{ margin: 0 }}>Structural Neighbors ({results.length})</h2>
-            <span className="spacer" />
-            {resolvedLabel && <span className="badge grey">{resolvedLabel}</span>}
+      {querySmiles ? (
+        <div className="split-aside">
+          <div className="card">
+            <h2>Query 2D Structure</h2>
+            <Structure smiles={querySmiles} width={300} height={210} />
+            <div className="small mono muted" style={{ marginTop: 8, wordBreak: "break-all" }}>
+              {querySmiles}
+            </div>
           </div>
-          <div className="scroll" style={{ marginTop: 12 }}>
-            <table>
-              <thead>
-                <tr>
-                  <th>#</th>
-                  <th>Compound</th>
-                  <th>ECFP4 Tanimoto</th>
-                  <th>MoA</th>
-                  <th>Clinical Phase</th>
-                </tr>
-              </thead>
-              <tbody>
-                {results.map((r: any, i: number) => (
-                  <tr key={r.pert_id}>
-                    <td className="mono muted">{i + 1}</td>
-                    <td>
-                      <Link
-                        href={`/compound/?id=${encodeURIComponent(r.pert_id)}`}
-                        prefetch={false}
-                      >
-                        {r.pert_iname || r.pert_id}
-                      </Link>
-                      <div className="small muted mono">{r.pert_id}</div>
-                    </td>
-                    <td>
-                      <TanimotoBar value={r.tanimoto} />
-                    </td>
-                    <td className="small">{r.moa || "—"}</td>
-                    <td className="small">{r.clinical_phase || "—"}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+          {tableCard || (
+            <div className="card row">
+              <span className="spinner" />
+              <span className="muted">Scanning 21,299 compounds...</span>
+            </div>
+          )}
         </div>
+      ) : (
+        tableCard
       )}
     </>
   );

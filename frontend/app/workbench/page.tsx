@@ -115,10 +115,10 @@ export default function Workbench() {
         <h1>Signature Workbench</h1>
       </div>
       <div className="sub">
-        Input disease up/down gene signatures to rank candidate drugs across K-PRL context, multi-scale connectivity, and NephroSafe guardrails.
+        Rank 21,299 compounds by multi-scale signature reversal and NephroSafe toxicity guardrails.
       </div>
 
-      <div className="chip-row" style={{ marginBottom: 14 }}>
+      <div className="chip-row" style={{ marginBottom: 10 }}>
         <span className="small muted">Presets:</span>
         {SIGNATURE_PRESETS.map((p) => (
           <button
@@ -144,7 +144,7 @@ export default function Workbench() {
           <textarea value={up} onChange={(e) => setUp(e.target.value)} />
           <label>Down-regulated genes</label>
           <textarea value={down} onChange={(e) => setDown(e.target.value)} />
-          <div className="row" style={{ marginTop: 12 }}>
+          <div className="row" style={{ marginTop: 10 }}>
             <button type="button" onClick={run} disabled={loading}>
               {loading && <span className="spinner" />}
               {loading ? "Scoring..." : "Run reversal query"}
@@ -162,7 +162,7 @@ export default function Workbench() {
             </button>
             {data && (
               <button type="button" className="ghost" onClick={exportJson}>
-                Export JSON + provenance
+                Export JSON
               </button>
             )}
           </div>
@@ -174,20 +174,20 @@ export default function Workbench() {
         </div>
 
         <div className="card">
-          <h2>Scoring Parameters</h2>
+          <h2>Parameters &amp; 4D Weights</h2>
           <div className="grid cols-2">
             <div>
               <label>Perturbation context</label>
               <select value={context} onChange={(e) => setContext(e.target.value)}>
                 <option value="kprl">K-PRL (kidney-shrunk, general)</option>
                 <option value="pan">Pan-cell consensus (systemic)</option>
-                <option value="renal_epi">HA1E renal epithelium (tubular injury / fibrosis)</option>
-                <option value="renal_endo">Endothelium (glomerular / vascular)</option>
-                <option value="renal_immune">Immune / inflammatory (LN, IgAN)</option>
+                <option value="renal_epi">HA1E renal epithelium (tubular/fibrosis)</option>
+                <option value="renal_endo">Endothelium (glomerular/vascular)</option>
+                <option value="renal_immune">Immune (LN, IgAN)</option>
               </select>
             </div>
             <div>
-              <label>Gene confidence tier</label>
+              <label>Gene tier</label>
               <select value={tier} onChange={(e) => setTier(e.target.value)}>
                 <option value="all">All 12,328 genes</option>
                 <option value="bing">BING high confidence</option>
@@ -195,7 +195,7 @@ export default function Workbench() {
               </select>
             </div>
             <div>
-              <label>Target kidney compartment</label>
+              <label>Kidney compartment</label>
               <select value={compartment} onChange={(e) => setCompartment(e.target.value)}>
                 {COMPARTMENTS.map(([val, lbl]) => (
                   <option key={val} value={val}>
@@ -205,7 +205,7 @@ export default function Workbench() {
               </select>
             </div>
             <div>
-              <label>Max T-DIKI risk tier</label>
+              <label>Max T-DIKI tier</label>
               <select value={maxDiki} onChange={(e) => setMaxDiki(e.target.value)}>
                 <option value="">No limit</option>
                 <option value="Moderate">Up to Moderate</option>
@@ -213,8 +213,9 @@ export default function Workbench() {
               </select>
             </div>
           </div>
-          <div className="row" style={{ marginTop: 10 }}>
-            <label style={{ margin: 0, display: "flex", alignItems: "center", gap: 6 }}>
+
+          <div className="row" style={{ marginTop: 8 }}>
+            <label style={{ margin: 0, display: "flex", alignItems: "center", gap: 5 }}>
               <input
                 type="checkbox"
                 checked={approvedOnly}
@@ -222,48 +223,50 @@ export default function Workbench() {
               />
               Approved drugs only
             </label>
-            <label style={{ margin: 0, display: "flex", alignItems: "center", gap: 6 }}>
+            <label style={{ margin: 0, display: "flex", alignItems: "center", gap: 5 }}>
               <input
                 type="checkbox"
                 checked={collapse}
                 onChange={(e) => setCollapse(e.target.checked)}
               />
-              Collapse by scaffold (InChIKey-14)
+              Collapse by scaffold
             </label>
           </div>
-          <h2 style={{ marginTop: 18 }}>4D RenalConn Weights</h2>
-          {[
-            ["Efficacy (RenalConn)", w1, setW1],
-            ["Nephrotoxicity penalty", w2, setW2],
-            ["Target compartment expression", w3, setW3],
-            ["Genetic support", w4, setW4],
-          ].map(([label, val, set]: any) => (
-            <div key={label}>
-              <label>
-                {label}: {Number(val).toFixed(2)}
-              </label>
-              <input
-                type="range"
-                min={0}
-                max={2}
-                step={0.05}
-                value={val}
-                onChange={(e) => set(Number(e.target.value))}
-                style={{ width: "100%" }}
-              />
-            </div>
-          ))}
+
+          <div className="grid cols-2" style={{ marginTop: 8 }}>
+            {[
+              ["Efficacy (RenalConn)", w1, setW1],
+              ["Nephrotoxicity penalty", w2, setW2],
+              ["Compartment expression", w3, setW3],
+              ["Genetic support", w4, setW4],
+            ].map(([label, val, set]: any) => (
+              <div key={label}>
+                <label style={{ marginTop: 4 }}>
+                  {label}: {Number(val).toFixed(2)}
+                </label>
+                <input
+                  type="range"
+                  min={0}
+                  max={2}
+                  step={0.05}
+                  value={val}
+                  onChange={(e) => set(Number(e.target.value))}
+                  style={{ width: "100%" }}
+                />
+              </div>
+            ))}
+          </div>
         </div>
       </div>
 
       {data && (
-        <div className="card" style={{ marginTop: 16 }}>
+        <div className="card" style={{ marginTop: 12 }}>
           <div className="row">
             <h2 style={{ margin: 0 }}>Candidate Drugs ({data.results?.length || 0})</h2>
             <span className="spacer" />
             <span className="small muted mono">job {data.job_id}</span>
           </div>
-          <div className="scroll" style={{ marginTop: 10 }}>
+          <div className="scroll" style={{ marginTop: 8 }}>
             <table>
               <thead>
                 <tr>
@@ -319,10 +322,10 @@ export default function Workbench() {
       )}
 
       {selected && radarItems.length > 0 && (
-        <div className="grid cols-2" style={{ marginTop: 16 }}>
+        <div className="grid cols-2" style={{ marginTop: 12 }}>
           <div className="card">
             <h2>Component τ Profile · {selected.pert_iname || selected.pert_id}</h2>
-            <RadarChart items={radarItems} />
+            <RadarChart items={radarItems} height={260} />
           </div>
           <div className="card">
             <h2>Query Provenance</h2>
