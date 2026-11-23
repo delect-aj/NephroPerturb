@@ -19,6 +19,7 @@ from pydantic import BaseModel, Field
 from starlette.routing import Route
 
 from .agent import route as agent_route, summarize as agent_summarize
+from .agent_runner import run_agent
 from .core.store import get_store
 from .engine import tdiki as tdiki_explain
 from .engine.lookup import structure_similarity_search, target_mimicry_top
@@ -39,7 +40,7 @@ async def lifespan(app: FastAPI):
         yield
 
 
-app = FastAPI(title="NephroPerturb API", version="1.0.0", lifespan=lifespan)
+app = FastAPI(title="NephroPerturb API", version="1.1.0", lifespan=lifespan)
 app.add_middleware(CORSMiddleware, allow_origins=["*"], allow_methods=["*"],
                    allow_headers=["*"])
 
@@ -91,6 +92,11 @@ class AgentRequest(BaseModel):
     use_llm: bool = True
 
 
+class AgentRunRequest(BaseModel):
+    text: str
+    use_llm: bool = False
+
+
 class SummarizeRequest(BaseModel):
     results: Dict
     question: str = ""
@@ -101,6 +107,7 @@ class SummarizeRequest(BaseModel):
 def health():
     store = get_store()
     return {"status": "ok",
+            "version": "1.1.0",
             "mode": "lite" if store.is_lite else "full",
             "mcp_mounted": _MOUNT_MCP,
             "compounds": int(len(store.cp_index)),
@@ -271,10 +278,16 @@ def target_profile(symbol: str, top_k: int = 50):
     finally:
         con.close()
 
+    if len(drugs):
+        drugs = drugs.drop_duplicates("pert_id").copy()
+        cp = store.compounds[~store.compounds.index.duplicated(keep="first")]
+        drugs["pert_iname"] = drugs["pert_id"].map(cp["pert_iname"])
+        drugs["clinical_phase"] = drugs["pert_id"].map(cp["clinical_phase"])
+
     with _COMPUTE_LOCK:
         mimic = target_mimicry_top(symbol, top_k=top_k)
     return {"gene": gene.to_dict(), "kidney_expression": expression,
-            "targeting_drugs": drugs.to_dict("records"),
+            "targeting_drugs": json.loads(drugs.to_json(orient="records")),
             "genetic_perturbations": ko_rows,
             "mimicking_compounds": mimic}
 
@@ -330,9 +343,26 @@ def get_case(case_id: str):
     return result
 
 
+_AGENT_TOOLS = {
+    "signature": lambda **kw: query_signature(SignatureRequest(**kw)),
+    "pathway": lambda **kw: query_pathway_tf(PathwayRequest(**kw)),
+    "compound": compound_profile,
+    "target": target_profile,
+    "structure": lambda **kw: similarity(StructureRequest(**kw)),
+    "list_cases": list_cases,
+    "case": get_case,
+    "find_compound": lambda tok: get_store().find_compound(tok),
+}
+
+
 @app.post("/api/v1/agent/route")
 def api_agent_route(req: AgentRequest):
     return agent_route(req.text, use_llm=req.use_llm)
+
+
+@app.post("/api/v1/agent/run")
+def api_agent_run(req: AgentRunRequest):
+    return run_agent(req.text, use_llm=req.use_llm, tools=_AGENT_TOOLS)
 
 
 @app.post("/api/v1/agent/summarize")

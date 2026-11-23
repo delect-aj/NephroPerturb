@@ -31,15 +31,48 @@ that the text does not provide.
 CASE_NAMES = ["DKD", "LN", "IgAN", "AKI", "CKD", "FSGS"]
 GENE_RE = re.compile(r"\b([A-Z][A-Z0-9][A-Z0-9-]{0,9})\b")
 SCOPE_WORDS = re.compile(
-    r"肾|kidney|renal|nephr|药|drug|compound|profile|moa|画像|化合物|基因|gene|gwas|"
-    r"通路|pathway|靶点|target|smiles|结构|structure|brd-|dkd|ln\b|igan|aki|ckd|fsgs|"
-    r"损伤|tox|diki|renin|tgf|smad|ppar|nfkb|hif|stat|糖尿病|diabet|lupus|狼疮|"
-    r"上调|下调|signature|up[\s:]|down[\s:]", re.I)
-SIGNATURE_HINT = re.compile(r"上调|下调|up[\s:：]|down[\s:：]|signature|基因列表", re.I)
+    r"肾|kidney|renal|nephro\w*|podocyt\w*|glomerul\w*|tubul\w*|fibros\w*|"
+    r"药|drug|compound|profile\w*|moa|画像|化合物|基因|gene|gwas|"
+    r"通路|pathway|靶点|target|smiles|结构|structur\w*|similar\w*|analog\w*|neighbou?r\w*|"
+    r"brd-|\b(dkd|ln|igan|aki|ckd|fsgs)\b|cohort\w*|biopsy|biopsies|"
+    r"损伤|toxic\w*|diki|renin|tgf|smad|ppar|nfkb|hif|stat|inhibit\w*|activat\w*|"
+    r"knock\w*|mimic\w*|糖尿病|diabet|lupus|狼疮|"
+    r"上调|下调|signature|up[\s:]|down[\s:]",
+    re.I,
+)
+SIGNATURE_HINT = re.compile(r"上调|下调|\bup[\s:：]|\bdown[\s:：]|signature|基因列表", re.I)
 
-STOP_TOKENS = {"SMILES", "BRD", "SOP", "DKD", "CKD", "AKI", "FSGS", "LN", "IGAN",
-               "RTPS", "DIRIL", "LINCS", "PROGENY", "COLLECTRI", "MCP", "API",
-               "TOP", "NA", "AND", "OR", "THE", "UP", "DOWN"}
+STOP_TOKENS = {
+    "SMILES", "BRD", "SOP", "DKD", "CKD", "AKI", "FSGS", "LN", "IGAN",
+    "RTPS", "DIRIL", "LINCS", "PROGENY", "COLLECTRI", "MCP", "API",
+    "TOP", "NA", "AND", "OR", "THE", "UP", "DOWN",
+    "KO", "CRISPR", "SHRNA", "MOA", "RNA", "DNA", "TF", "TFS",
+}
+
+PROGENY_MODULES_RE = re.compile(
+    r"\b("
+    r"TGFb|TGFB|NFkB|NFKB|JAK-STAT|Hypoxia|p53|MAPK|EGFR|PI3K|TNFa|VEGF|WNT|Trail|Estrogen|Androgen|"
+    r"PT_FAO_mito|Podocyte_slit|ECM_fibrosis|Complement|Ferroptosis_pyroptosis|"
+    r"ER_stress_UPR|RAAS|Tubular_injury_KIM1|Inflammation_NFkB|TGFb_SMAD|Apoptosis_p53|Autophagy|"
+    r"SMAD\d|PPAR\w*|RELA|HIF\w*|STAT\d"
+    r")\b",
+    re.I,
+)
+
+NEG_VERBS = (
+    r"inhibit\w*|suppress\w*|block\w*|antagoni\w*|attenuat\w*|reduc\w*|"
+    r"down-?regulat\w*|silenc\w*|抑制|阻断|下调|拮抗|降低"
+)
+POS_VERBS = (
+    r"activat\w*|enhanc\w*|restor\w*|induc\w*|agoni\w*|"
+    r"up-?regulat\w*|boost\w*|激活|增强|恢复|上调|促进"
+)
+VERB_RE = re.compile(rf"(?P<neg>{NEG_VERBS})|(?P<pos>{POS_VERBS})", re.I)
+SUFFIX_MOD_RE = re.compile(
+    r"^\s*(?:(?P<neg>inhibitor|antagonist|blocker|suppressor|抑制剂?|-1)|"
+    r"(?P<pos>activator|agonist|激动剂?|\+?1))(?:\b|(?=\s|$|[，,;；。]))",
+    re.I,
+)
 
 
 def _gene_tokens(text):
@@ -47,17 +80,37 @@ def _gene_tokens(text):
             and len(t) >= 2]
 
 
+def _extract_smiles(text):
+    for raw in re.split(r"\s+", text.strip()):
+        tok = raw.strip().rstrip(".,;?!")
+        if len(tok) < 6 or tok.startswith("InChI=") or tok.upper().startswith("BRD-"):
+            continue
+        if not re.match(r"^[A-Za-z0-9@+\-\[\]\(\)=#\\/\.%]+$", tok):
+            continue
+        has_struct_char = any(ch in tok for ch in "()=#[]")
+        has_aromatic_ring = bool(re.search(r"[cnops]", tok) and re.search(r"\d", tok))
+        if has_struct_char or has_aromatic_ring:
+            return tok
+    return None
+
+
 def _parse_signature(text):
     """Extract up/down gene lists from natural-language SOP-1 requests."""
     up, down = [], []
-    up_pat = re.compile(r"(上调|升高|高表达|up-?regulat\w*|up[:\s]|up genes?)[:：]?\s*"
-                        r"([A-Za-z0-9,\s、;/_-]+)", re.I)
-    down_pat = re.compile(r"(下调|降低|低表达|down-?regulat\w*|down[:\s]|down genes?)[:：]?\s*"
-                          r"([A-Za-z0-9,\s、;/_-]+)", re.I)
+    up_pat = re.compile(
+        r"(?:上调|升高|高表达|\bup-?regulat\w*|\bup[:：\s]|\bup\s+genes?)[:：]?\s*"
+        r"((?:(?!下调|降低|低表达|\bdown[-_\s]?(?:regulat|genes?|[:：\s])|[。.]).)+)",
+        re.I,
+    )
+    down_pat = re.compile(
+        r"(?:下调|降低|低表达|\bdown-?regulat\w*|\bdown[:：\s]|\bdown\s+genes?)[:：]?\s*"
+        r"((?:(?!上调|升高|高表达|\bup[-_\s]?(?:regulat|genes?|[:：\s])|[。.]).)+)",
+        re.I,
+    )
     for m in up_pat.finditer(text):
-        up += _gene_tokens(m.group(2))
+        up += _gene_tokens(m.group(1))
     for m in down_pat.finditer(text):
-        down += _gene_tokens(m.group(2))
+        down += _gene_tokens(m.group(1))
     if not up and not down:
         # "A B C 上调 / D E 下调" word order: tokens before the marker
         before_up = re.split(r"上调|升高|高表达", text)
@@ -65,14 +118,20 @@ def _parse_signature(text):
             up = _gene_tokens(before_up[0])[-30:]
             down = _gene_tokens(before_up[1])[:30] if "下调" in before_up[1] else []
     up = [g for g in dict.fromkeys(up) if g not in down]
+    down = list(dict.fromkeys(down))
     return up, down
 
 
 def _parse_filters(text):
     filters = {}
-    if re.search(r"已批准|approved|FDA批准|上市", text, re.I):
+    if re.search(r"已批准|approved|launched|marketed|fda\s*批准|上市", text, re.I):
         filters["approved_only"] = True
-    if re.search(r"低肾毒|低风险|low.{0,6}(diki|risk)|安全", text, re.I):
+    if re.search(
+        r"低肾毒|低风险|low[- ]?(?:nephro)?tox\w*|low.{0,25}risk|"
+        r"\b(?:nephrosafe|safe|safest)\b|安全",
+        text,
+        re.I,
+    ):
         filters["max_diki_tier"] = "Low"
     if re.search(r"母核|骨架|scaffold|去重", text, re.I):
         filters["collapse_scaffold"] = True
@@ -87,7 +146,7 @@ def _parse_context(text):
         return "renal_immune"
     if "renal_endo" in low or "内皮" in text:
         return "renal_endo"
-    if "pan" in low or "泛细胞" in text:
+    if re.search(r"\bpan\b|泛细胞", low):
         return "pan"
     return None
 
@@ -102,13 +161,62 @@ def _parse_compartment(text):
     return None
 
 
+def _dir_from_matches(matches):
+    last = None
+    for m in matches:
+        last = -1 if m.group("neg") else 1
+    return last
+
+
+def _target_direction(text, start, end):
+    """Determine +1/-1 for a pathway/TF mention based on surrounding verbs."""
+    # 1) Immediate noun modifier or numeric value right after target ("SMAD3 inhibitor")
+    sm = SUFFIX_MOD_RE.match(text[end:min(len(text), end + 20)])
+    if sm:
+        return -1 if sm.group("neg") else 1
+
+    # 2) Same-clause prefix (~35 chars, not crossing comma/semicolon/sentence break)
+    win_pre = text[max(0, start - 35):start]
+    clause_pre = re.split(r"[,，;；。.\n]", win_pre)[-1]
+    pre_hits = list(VERB_RE.finditer(clause_pre))
+    if pre_hits:
+        return _dir_from_matches(pre_hits)
+
+    # 3) Same-clause suffix (~20 chars) for patterns like "SMAD3 抑制"
+    win_suf = text[end:min(len(text), end + 20)]
+    clause_suf = re.split(r"[,，;；。.\n]|\b(?:and|then)\b|且", win_suf, maxsplit=1)[0]
+    suf_hits = list(VERB_RE.finditer(clause_suf))
+    if suf_hits:
+        return -1 if suf_hits[0].group("neg") else 1
+
+    # 4) Broad prefix across comma list ("Inhibit SMAD3, TGFb") within same sentence
+    broad_pre = re.split(r"[;；。.\n]", text[max(0, start - 45):start])[-1]
+    broad_hits = list(VERB_RE.finditer(broad_pre))
+    if broad_hits:
+        return _dir_from_matches(broad_hits)
+
+    return 1
+
+
+def _extract_pathway_targets(text):
+    norm = re.sub(r"TGF-?(?:β|beta)\b|TGF-b\b", "TGFb", text, flags=re.I)
+    norm = re.sub(r"NF-?(?:κ|k)B\b", "NFkB", norm, flags=re.I)
+    norm = re.sub(r"TNF-?(?:α|alpha)\b|TNF-a\b", "TNFa", norm, flags=re.I)
+    targets = {}
+    for m in PROGENY_MODULES_RE.finditer(norm):
+        name = m.group(1)
+        if name not in targets:
+            targets[name] = _target_direction(norm, m.start(1), m.end(1))
+    return targets
+
+
 def _rule_route(text):
     low = text.lower()
     if not SCOPE_WORDS.search(text):
         return {"sop_id": "OUT_OF_SCOPE", "params": {},
                 "missing": [], "confidence": 0.8, "mode": "rules",
-                "message": "该问题超出 NephroPerturb 的肾病药物重定位范围。"}
-    # explicit up/down gene lists always mean the signature-reversal SOP,
+                "message": "This question is outside NephroPerturb's scope (kidney disease drug repurposing)."}
+    # Explicit up/down gene lists always mean the signature-reversal SOP,
     # even if genes collide with pathway keywords (TGFB1, PPARA ...)
     up_genes, down_genes = _parse_signature(text)
     if SIGNATURE_HINT.search(text) and (up_genes or down_genes):
@@ -123,38 +231,56 @@ def _rule_route(text):
         missing = [k for k in ("up_genes", "down_genes") if not params.get(k)]
         return {"sop_id": "SOP-1", "params": params, "missing": missing,
                 "confidence": 0.8 if not missing else 0.5, "mode": "rules"}
-    if re.search(r"sop[- ]?6|案例|队列|case|dkd|ln\b|igan|aki|ckd|fsgs", low):
+    if re.search(r"sop[- ]?6|案例|队列|\bcase\b|\b(dkd|ln|igan|aki|ckd|fsgs)\b", low):
         case = next((c for c in CASE_NAMES if re.search(rf"\b{c}\b", text, re.I)), None)
         return {"sop_id": "SOP-6", "params": {"case_id": case},
                 "missing": [] if case else ["case_id"],
                 "confidence": 0.75, "mode": "rules"}
-    if re.search(r"smiles|结构|相似|unknown|brd-", low):
-        if re.search(r"敲除|敲低|knockout|crispr|shrna|遗传扰动", low):
-            gene = re.search(r"\b([A-Z][A-Z0-9]{2,9})\b", text)
+    if re.search(
+        r"smiles|结构|相似|unknown|brd-|\b(?:similar\w*|similarity|structur\w*|analog\w*|"
+        r"neighbou?r\w*|scaffold\s+hop|tanimoto)\b",
+        low,
+    ):
+        if re.search(r"敲除|敲低|knock[- ]?out|knock[- ]?down|mimic\w*|crispr|shrna|遗传扰动|genetic perturbation", low):
+            tokens = _gene_tokens(text)
+            gene = tokens[0] if tokens else None
             return {"sop_id": "SOP-4",
-                    "params": {"gene": gene.group(1) if gene else None},
+                    "params": {"gene": gene},
                     "missing": [] if gene else ["gene"], "confidence": 0.65,
                     "mode": "rules"}
-        smiles = re.search(r"\b([A-Za-z0-9@+\-\[\]\(\)=#\\/]{12,})\b", text)
+        smiles = _extract_smiles(text)
+        brd = re.search(r"\b(BRD-[A-Z0-9-]+)\b", text, re.I)
+        params = {"smiles": smiles}
+        if brd and not smiles:
+            params["pert_id"] = brd.group(1).upper()
+        missing = [] if (smiles or brd) else ["smiles"]
         return {"sop_id": "SOP-5",
-                "params": {"smiles": smiles.group(1) if smiles else None},
-                "missing": [] if smiles else ["smiles"], "confidence": 0.65,
+                "params": params,
+                "missing": missing, "confidence": 0.65,
                 "mode": "rules"}
-    if re.search(r"靶点|target|敲除|敲低|遗传扰动|knockout|crispr|shrna", low):
-        gene = re.search(r"\b([A-Z][A-Z0-9]{2,9})\b", text)
+    if re.search(r"靶点|target|敲除|敲低|遗传扰动|knock[- ]?out|knock[- ]?down|mimic\w*|crispr|shrna|genetic perturbation", low):
+        tokens = _gene_tokens(text)
+        gene = tokens[0] if tokens else None
         return {"sop_id": "SOP-4",
-                "params": {"gene": gene.group(1) if gene else None},
+                "params": {"gene": gene},
                 "missing": [] if gene else ["gene"], "confidence": 0.65,
                 "mode": "rules"}
-    if re.search(r"通路|pathway|转录因子|tf\b|tgf|smad|ppara|nfkb|hif|stat\d", low):
-        pairs = re.findall(r"(TGF\w*|SMAD\d|PPAR\w*|NFKB\w*|RELA|HIF\w*|STAT\d)",
-                           text, re.I)
-        targets = {p: (-1 if re.search(p + r"\s*(抑制|inhibit|-1|下调)", text, re.I)
-                       else 1) for p in dict.fromkeys(pairs)}
+    if re.search(
+        r"通路|转录因子|signal(?:l)?ing|pathway|transcription\s+factor|\btfs?\b|"
+        r"tgf|smad|ppar|nfkb|nf-kb|hif|stat\d|jak-stat|mapk|egfr|pi3k|tnfa|vegf|wnt|"
+        r"hypoxia|p53|trail|estrogen|androgen|raas|autophagy|complement|ecm_fibrosis|"
+        r"podocyte_slit|pt_fao_mito|er_stress_upr|ferroptosis|tubular_injury|apoptosis_p53",
+        low,
+    ):
+        targets = _extract_pathway_targets(text)
         return {"sop_id": "SOP-3", "params": {"targets": targets},
                 "missing": [] if targets else ["targets"], "confidence": 0.7,
                 "mode": "rules"}
-    if re.search(r"画像|详情|信息|profile|机制|moa|安全|这个药|该药|这个化合物|查一下", low):
+    if re.search(
+        r"画像|详情|信息|profile|机制|moa|安全性|肾毒风险|\b(?:safety|nephrotoxic\w*|toxicity)\b|"
+        r"这个药|该药|这个化合物|查一下",
+        low,
+    ):
         return {"sop_id": "SOP-2", "params": {"compound": text.strip()},
                 "missing": [], "confidence": 0.6, "mode": "rules"}
     up, down = _parse_signature(text)
@@ -237,7 +363,7 @@ def verify_summary(text, results):
 
     values = []
     _numeric_values(rows, values)
-    values = np_values = [v for v in values if abs(v) < 1e12]
+    np_values = [v for v in values if abs(v) < 1e12]
     for raw, pct in NUMBER_RE.findall(text):
         try:
             val = float(raw)
@@ -257,7 +383,7 @@ def verify_summary(text, results):
 def summarize(results, question="", use_llm=True):
     top = results.get("results", [])[:5]
     if not top:
-        return {"summary": "本次查询没有返回候选。", "llm_used": False,
+        return {"summary": "No candidates were returned.", "llm_used": False,
                 "verified": True}
     lines = [
         f"- {r.get('pert_iname') or r.get('pert_id')}: "
@@ -265,7 +391,7 @@ def summarize(results, question="", use_llm=True):
         f"T-DIKI={r.get('tdiki_tier', 'NA')}, DIRIL={r.get('diril_label', 'NA')}"
         for r in top
     ]
-    template = "按 RTPS 排序的前 5 个候选：\n" + "\n".join(lines)
+    template = "Top 5 candidates ranked by RTPS:\n" + "\n".join(lines)
     api_key = os.environ.get("DEEPSEEK_API_KEY")
     if not use_llm or not api_key:
         return {"summary": template, "llm_used": False, "verified": True}
@@ -278,7 +404,7 @@ def summarize(results, question="", use_llm=True):
             messages=[
                 {"role": "system", "content":
                  "Summarize ONLY the supplied result table. Do not add drugs, "
-                 "targets or numbers that are absent. Reply in Chinese, 4 sentences max."},
+                 "targets or numbers that are absent. Reply in English, 4 sentences max."},
                 {"role": "user", "content": question + "\n\n"
                  + json.dumps(top, ensure_ascii=False)},
             ],

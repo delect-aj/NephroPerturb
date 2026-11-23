@@ -23,24 +23,40 @@ export default function TargetIndex() {
     const clean = sym.trim();
     if (!clean) return;
     setActive(clean);
+    setGene(clean);
     router.push(`/target/?symbol=${encodeURIComponent(clean)}`);
   }
 
   return (
     <>
-      <div className="page-head"><h1>靶基因与遗传印证</h1></div>
-      <div className="sub">查询靶点在肾单位各区室的表达、直接靶向药物，以及与其敲低签名高度模拟的化合物。</div>
-      <div className="card" style={{ maxWidth: 640, marginBottom: 16 }}>
-        <label>基因符号</label>
+      <div className="page-head">
+        <h1>Target & Genetics</h1>
+      </div>
+      <div className="sub">
+        Inspect nephron compartment expression, direct targeting drugs, and small molecules mimicking genetic knockdown.
+      </div>
+      <div className="card" style={{ maxWidth: 680, marginBottom: 18 }}>
+        <label>Human gene symbol</label>
         <div className="row">
-          <input type="text" value={gene} onChange={(e) => setGene(e.target.value)}
-            onKeyDown={(e) => { if (e.key === "Enter") go(gene); }} />
-          <button onClick={() => go(gene)}>查询</button>
+          <input
+            type="text"
+            value={gene}
+            placeholder="e.g. TGFBR1, APOL1, HAVCR1"
+            onChange={(e) => setGene(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === "Enter") go(gene);
+            }}
+          />
+          <button type="button" onClick={() => go(gene)}>
+            Search
+          </button>
         </div>
-        <div className="row small" style={{ marginTop: 12, gap: 8 }}>
+        <div className="chip-row" style={{ marginTop: 12 }}>
+          <span className="small muted">Examples:</span>
           {["TGFBR1", "APOL1", "HAVCR1", "JAK2", "SMAD3", "NPHS1", "PPARA"].map((g) => (
-            <button key={g} className="badge grey" style={{ cursor: "pointer", border: "none" }}
-              onClick={() => go(g)}>{g}</button>
+            <button key={g} type="button" className="chip" onClick={() => go(g)}>
+              {g}
+            </button>
           ))}
         </div>
       </div>

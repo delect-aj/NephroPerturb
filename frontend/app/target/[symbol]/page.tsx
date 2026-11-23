@@ -5,6 +5,6 @@ export function generateStaticParams() {
 }
 
 export default function TargetDetailPage({ params }: { params: { symbol: string } }) {
-  const sym = decodeURIComponent(String(params?.symbol || ""));
-  return sym && sym !== "_" ? <TargetView symbol={sym} /> : null;
+  const symbol = decodeURIComponent(String(params?.symbol || ""));
+  return <TargetView symbol={symbol === "_" ? "" : symbol} />;
 }

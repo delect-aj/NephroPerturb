@@ -17,7 +17,6 @@ node_modules/
 store/models/*.json
 deploy/*.pid
 store_lite/
-frontend/out/
 .venv-lite/
 .lite.pid
 logs/

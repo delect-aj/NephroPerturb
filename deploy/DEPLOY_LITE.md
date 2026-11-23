@@ -41,18 +41,15 @@ git clone https://github.com/delect-aj/NephroPerturb.git ~/renalkb
 cd ~/renalkb
 ```
 
-### 第 2 步：仅传输 `store_lite/` 与预编译 `frontend/out/`（共约 1.6 GB）
-在目标小服务器上执行（将 `<源服务器地址>` 替换为你的源服务器 IP/域名）：
+### 第 2 步：仅传输预构建的 `store_lite/`（约 1.6 GB）
+> 自 `v1.1.0` 起，预编译静态前端 `frontend/out/`（2.2 MB）已随 Git 仓库直接分发，`git clone` / `git pull` 会自动包含，因此**只需传输 `store_lite/`**。
+
+在目标小服务器上执行（推荐先配置 `~/.ssh/config` 别名 `nephro-src` 指向 `dongb@c4a53664d2100454.natapp.cc:8089`）：
 ```bash
-mkdir -p ~/renalkb/store_lite ~/renalkb/frontend/out
+mkdir -p ~/renalkb/store_lite
 
-rsync -av --progress -e "ssh -p 8089" \
-  dongb@<源服务器地址>:/public/home/dongb/agent/renalkb/store_lite/ \
+rsync -avP nephro-src:/public/home/dongb/agent/renalkb/store_lite/ \
   ~/renalkb/store_lite/
-
-rsync -av --progress -e "ssh -p 8089" \
-  dongb@<源服务器地址>:/public/home/dongb/agent/renalkb/frontend/out/ \
-  ~/renalkb/frontend/out/
 ```
 
 ### 第 3 步：一键轻量环境安装与启动（无需 Docker / Conda / Node.js）
@@ -89,12 +86,27 @@ systemctl --user enable --now nephroperturb-lite
 
 ---
 
-## 3. 验收与资源监控命令
+## 3. 更新已有小服务器部署（代码与前端迭代）
+
+当只更新了后端路由/接口或静态前端页面（未改动 `requirements-lite.txt` 与 `store_lite/` 矩阵）时，**无需重新安装依赖、也无需重新 `rsync` 1.6 GB 的 `store_lite/`**，在小服务器执行：
+
+```bash
+cd ~/renalkb
+rm -rf frontend/out            # 清理早期 rsync 的未跟踪目录（v1.1.0 起已由 Git 跟踪，否则 git pull 会冲突）
+git pull origin main
+systemctl --user restart nephroperturb-lite
+sleep 3 && curl -fsS http://127.0.0.1:8091/health && echo
+# 预期输出包含 "version":"1.1.0","mode":"lite","mcp_mounted":true
+```
+
+---
+
+## 4. 验收与资源监控命令
 
 ```bash
 # 1) 查看服务健康与 Lite 模式确认
 curl -fsS http://127.0.0.1:8091/health
-# 预期输出包含 "mode":"lite","mcp_mounted":true
+# 预期输出包含 "version":"1.1.0","mode":"lite","mcp_mounted":true
 
 # 2) 验证 Web 静态界面与单端口 MCP
 curl -fsS -o /dev/null -w "UI %{http_code}\n" http://127.0.0.1:8091/
