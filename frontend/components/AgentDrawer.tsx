@@ -3,22 +3,28 @@ import { useEffect, useRef } from "react";
 import { usePathname } from "next/navigation";
 import { useAgent } from "@/components/AgentContext";
 import AgentResult from "@/components/AgentResult";
-import { AGENT_EXAMPLES } from "@/lib/examples";
+import { RESEARCH_PLAYBOOKS } from "@/lib/examples";
 
 export default function AgentDrawer() {
   const pathname = usePathname() || "/";
   const {
     prompt,
     setPrompt,
-    useLLM,
-    setUseLLM,
+    agentMode,
+    setAgentMode,
+    includeLiterature,
+    setIncludeLiterature,
+    statusInfo,
     open,
     setOpen,
     loading,
+    turns,
     result,
     error,
     focusTick,
     run,
+    stop,
+    newSession,
   } = useAgent();
   const boxRef = useRef<HTMLTextAreaElement>(null);
 
@@ -33,23 +39,44 @@ export default function AgentDrawer() {
   if (!open) {
     return (
       <button type="button" className="agent-pill" onClick={() => setOpen(true)}>
-        Ask NephroAgent
+        Ask NephroAgent{turns.length ? ` (${turns.length})` : ""}
       </button>
     );
   }
+
+  const quota = statusInfo?.quota;
 
   return (
     <div className="agent-drawer">
       <header>
         <span>NephroAgent</span>
+        {turns.length > 0 && (
+          <span className="badge" style={{ background: "rgba(255,255,255,0.18)", color: "#fff" }}>
+            Turn {turns.length}
+          </span>
+        )}
         <span className="spacer" />
         <span className="small" style={{ opacity: 0.85 }}>
-          {useLLM ? "DeepSeek slots" : "0-LLM rules"}
+          {agentMode === "fast"
+            ? "0-LLM"
+            : quota
+              ? `${quota.remaining_hourly}/${quota.hourly_limit}/hr`
+              : "ReAct"}
         </span>
+        {turns.length > 0 && (
+          <button
+            type="button"
+            className="mini ghost"
+            style={{ marginLeft: 4, background: "rgba(255,255,255,0.14)", color: "#fff" }}
+            onClick={newSession}
+          >
+            New
+          </button>
+        )}
         <button
           type="button"
           className="mini ghost"
-          style={{ marginLeft: 6, background: "rgba(255,255,255,0.16)", color: "#fff" }}
+          style={{ marginLeft: 4, background: "rgba(255,255,255,0.16)", color: "#fff" }}
           onClick={() => setOpen(false)}
         >
           Minimize
@@ -58,8 +85,8 @@ export default function AgentDrawer() {
       <div className="body">
         <textarea
           ref={boxRef}
-          style={{ minHeight: 62 }}
-          placeholder="Ask about cohorts, genes, pathways, drugs, or SMILES..."
+          style={{ minHeight: 58 }}
+          placeholder="Ask about cohorts, drugs, comparisons (#1 vs #2), or literature..."
           value={prompt}
           onChange={(e) => setPrompt(e.target.value)}
           onKeyDown={(e) => {
@@ -70,31 +97,44 @@ export default function AgentDrawer() {
           }}
         />
         <div className="chip-row" style={{ marginTop: 6 }}>
-          {AGENT_EXAMPLES.slice(0, 3).map((ex) => (
+          {RESEARCH_PLAYBOOKS.slice(0, 2).map((pb) => (
             <button
-              key={ex.id}
+              key={pb.id}
               type="button"
               className="chip"
-              onClick={() => setPrompt(ex.prompt)}
+              onClick={() => run(pb.prompt, { skillId: pb.skillId })}
             >
-              {ex.title}
+              {pb.badge}
             </button>
           ))}
         </div>
         <div className="row" style={{ marginTop: 8 }}>
-          <label className="small" style={{ margin: 0, display: "flex", alignItems: "center", gap: 5 }}>
+          <label className="small" style={{ margin: 0, display: "flex", alignItems: "center", gap: 4 }}>
             <input
               type="checkbox"
-              checked={useLLM}
-              onChange={(e) => setUseLLM(e.target.checked)}
+              checked={agentMode === "auto"}
+              onChange={(e) => setAgentMode(e.target.checked ? "auto" : "fast")}
             />
-            DeepSeek slot parser
+            DeepSeek ReAct
+          </label>
+          <label className="small" style={{ margin: 0, display: "flex", alignItems: "center", gap: 4 }}>
+            <input
+              type="checkbox"
+              checked={includeLiterature}
+              onChange={(e) => setIncludeLiterature(e.target.checked)}
+            />
+            PubMed/Trials
           </label>
           <span className="spacer" />
-          <button type="button" onClick={() => run()} disabled={loading}>
-            {loading && <span className="spinner" />}
-            {loading ? "Running..." : "Run Agent"}
-          </button>
+          {loading ? (
+            <button type="button" className="ghost mini" onClick={stop}>
+              Stop
+            </button>
+          ) : (
+            <button type="button" onClick={() => run()}>
+              Run
+            </button>
+          )}
         </div>
 
         {error && (

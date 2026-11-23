@@ -5,13 +5,15 @@ from mcp.server.mcpserver import MCPServer
 from mcp.server.transport_security import TransportSecuritySettings
 
 from .core.store import get_store
+from .engine.compare import compare_compounds
+from .engine.literature import search_clinical_trials, search_kidney_literature
 from .engine.lookup import clean_val, structure_similarity_search, target_mimicry_top
 from .engine.scoring import score_pathway_tf, score_signature
 
 mcp = MCPServer(
     "NephroPerturb",
-    description="Kidney-context drug perturbation knowledge base with nephrotoxicity guardrails",
-    version="1.0.0",
+    description="Kidney-context drug perturbation knowledge base with nephrotoxicity guardrails & literature grounding",
+    version="1.2.0",
 )
 
 
@@ -78,6 +80,47 @@ def nephro_list_renal_cases() -> dict:
     finally:
         con.close()
     return {"cases": json.loads(frame.to_json(orient="records"))}
+
+
+@mcp.tool()
+def nephro_search_literature(
+    entity: str,
+    disease_context: str = "kidney disease",
+    include_safety: bool = True,
+    max_papers: int = 6,
+) -> dict:
+    """Bidirectional Europe PMC / PubMed search for kidney efficacy and nephrotoxicity."""
+    try:
+        return search_kidney_literature(
+            entity,
+            disease_context=disease_context,
+            include_safety=include_safety,
+            max_papers=max_papers,
+        )
+    except ValueError as exc:
+        return {"error": str(exc)}
+
+
+@mcp.tool()
+def nephro_search_clinical_trials(
+    compound: str,
+    condition: str = "kidney disease",
+    max_trials: int = 5,
+) -> dict:
+    """Query ClinicalTrials.gov v2 for registered kidney disease trials of a compound."""
+    try:
+        return search_clinical_trials(compound, condition=condition, max_trials=max_trials)
+    except ValueError as exc:
+        return {"error": str(exc)}
+
+
+@mcp.tool()
+def nephro_compare_compounds(tokens: list[str]) -> dict:
+    """Side-by-side comparison of 2-4 compounds on T-DIKI safety, PROGENy pathways & renal modules."""
+    try:
+        return compare_compounds(tokens)
+    except (LookupError, ValueError) as exc:
+        return {"error": str(exc)}
 
 
 def create_mcp_asgi_app(path: str = "/mcp"):

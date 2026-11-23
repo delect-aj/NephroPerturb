@@ -62,6 +62,29 @@ def target_mimicry_top(symbol: str, top_k: int = 50):
              "similarity": float(sims[i])} for i in idx]
 
 
+def _clean_float(value):
+    v = clean_val(value)
+    return None if v is None else float(v)
+
+
+def _clean_int(value):
+    v = clean_val(value)
+    return None if v is None else int(v)
+
+
+def _neighbor_record(pid, row, tani_score: float) -> dict:
+    return {
+        "pert_id": pid,
+        "pert_iname": clean_val(row.get("pert_iname")),
+        "tanimoto": float(tani_score),
+        "moa": clean_val(row.get("moa")),
+        "clinical_phase": clean_val(row.get("clinical_phase")),
+        "tdiki_tier": clean_val(row.get("tdiki_tier")),
+        "tdiki_prob": _clean_float(row.get("tdiki_prob")),
+        "diril_label": _clean_int(row.get("diril_label")),
+    }
+
+
 def structure_similarity_search(smiles: str = None, pert_id: str = None, top_k: int = 20):
     store = get_store()
 
@@ -106,13 +129,7 @@ def structure_similarity_search(smiles: str = None, pert_id: str = None, top_k: 
             row = store.compounds.loc[pid]
             if hasattr(row, "ndim") and row.ndim > 1:
                 row = row.iloc[0]
-            results.append({
-                "pert_id": pid,
-                "pert_iname": clean_val(row.get("pert_iname")),
-                "tanimoto": float(tani[idx]),
-                "moa": clean_val(row.get("moa")),
-                "clinical_phase": clean_val(row.get("clinical_phase")),
-            })
+            results.append(_neighbor_record(pid, row, tani[idx]))
         return results
 
     # Full mode fallback
@@ -155,11 +172,5 @@ def structure_similarity_search(smiles: str = None, pert_id: str = None, top_k: 
         row = store.compounds.loc[pid]
         if hasattr(row, "ndim") and row.ndim > 1:
             row = row.iloc[0]
-        results.append({
-            "pert_id": pid,
-            "pert_iname": clean_val(row.get("pert_iname")),
-            "tanimoto": score,
-            "moa": clean_val(row.get("moa")),
-            "clinical_phase": clean_val(row.get("clinical_phase")),
-        })
+        results.append(_neighbor_record(pid, row, score))
     return results

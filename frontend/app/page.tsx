@@ -1,9 +1,10 @@
 "use client";
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { useAgent } from "@/components/AgentContext";
 import AgentResult from "@/components/AgentResult";
 import ExampleCards from "@/components/ExampleCards";
+import { RESEARCH_PLAYBOOKS } from "@/lib/examples";
 
 const STATS = [
   ["21,299", "Compounds"],
@@ -11,14 +12,14 @@ const STATS = [
   ["591,697", "Level-5 Profiles"],
   ["9,888", "IK-14 Scaffolds"],
   ["31,082", "Genetic Perturbs"],
-  ["725", "CollecTRI TFs"],
+  ["6", "Agent Skills"],
 ];
 
 const HOW_STEPS = [
-  ["Match Workflow", "Identifies your task type (SOP-1 to SOP-6) using fixed rules, without AI guessing."],
-  ["Standardize Inputs", "Converts gene symbols, drug names, kidney cohorts, or SMILES into database IDs."],
-  ["Run Analysis", "Computes exact reversal scores, knockdown matches, or chemical similarity."],
-  ["Safety Check & Report", "Flags nephrotoxic drugs (T-DIKI / DIRIL) and returns a traceable result table."],
+  ["Select Skill & Plan", "Matches one of 6 scoped Skills and plans multi-step tool execution."],
+  ["Execute & Reflect", "Runs deterministic scoring, detects high T-DIKI hits, and auto re-screens safe drugs."],
+  ["Fetch Live Evidence", "Queries Europe PMC / PubMed & ClinicalTrials.gov with 7-day SQLite caching."],
+  ["Verify & Report", "Audits every PMID, NCT ID, and score before rendering your traceable dossier."],
 ];
 
 const EXPLORE_TILES = [
@@ -34,19 +35,27 @@ export default function Home() {
   const {
     prompt,
     setPrompt,
-    useLLM,
-    setUseLLM,
+    agentMode,
+    setAgentMode,
+    selectedSkill,
+    setSelectedSkill,
+    includeLiterature,
+    setIncludeLiterature,
+    skills,
+    statusInfo,
     loading,
-    result,
+    turns,
     error,
     focusTick,
     run,
-    clearResult,
+    stop,
+    newSession,
   } = useAgent();
 
+  const [followUp, setFollowUp] = useState("");
   const consoleRef = useRef<HTMLTextAreaElement>(null);
   const heroRef = useRef<HTMLElement>(null);
-  const resultRef = useRef<HTMLDivElement>(null);
+  const threadEndRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     if (focusTick > 0) {
@@ -56,25 +65,66 @@ export default function Home() {
   }, [focusTick]);
 
   useEffect(() => {
-    if (result) {
-      resultRef.current?.scrollIntoView({ behavior: "smooth", block: "nearest" });
+    if (turns.length > 0) {
+      threadEndRef.current?.scrollIntoView({ behavior: "smooth", block: "nearest" });
     }
-  }, [result]);
+  }, [turns.length, turns[turns.length - 1]?.steps?.length, turns[turns.length - 1]?.status]);
+
+  const quota = statusInfo?.quota;
+  const llmReady = Boolean(statusInfo?.llm_configured);
 
   return (
     <>
       <section className="hero" ref={heroRef} id="agent-console">
         <div>
-          <span className="hero-kicker">Deterministic SOP Engine · Zero Hallucination</span>
+          <div className="row" style={{ gap: 6, marginBottom: 6 }}>
+            <span className="hero-kicker" style={{ marginBottom: 0 }}>
+              Skill-Guided ReAct · Europe PMC &amp; ClinicalTrials · Zero Hallucination
+            </span>
+            {statusInfo && (
+              <span
+                className={`quota-pill ${llmReady && quota?.allowed ? "ready" : ""}`}
+                title="Hourly per-IP DeepSeek ReAct quota (auto-falls back to 0-LLM multi-step when depleted)"
+              >
+                {llmReady
+                  ? `DeepSeek ReAct · ${quota?.remaining_hourly ?? 0}/${quota?.hourly_limit ?? 20} left/hr`
+                  : "0-LLM Multi-Step Ready"}
+              </span>
+            )}
+          </div>
+
           <h1>NephroAgent</h1>
           <div className="muted" style={{ fontSize: 13 }}>
-            Rule-governed kidney drug-repurposing assistant backed by K-PRL signatures and NephroSafe guardrails.
+            Autonomous multi-step kidney drug-repurposing research agent: plans workflows, reflects on nephrotoxicity, searches PubMed &amp; trials, and verifies every claim.
+          </div>
+
+          {/* Skill Selector Strip */}
+          <div className="skill-strip" role="group" aria-label="Select Agent Skill">
+            <button
+              type="button"
+              className={`skill-pill ${selectedSkill === null ? "active" : ""}`}
+              onClick={() => setSelectedSkill(null)}
+            >
+              Auto Skill
+            </button>
+            {skills.map((sk) => (
+              <button
+                key={sk.id}
+                type="button"
+                className={`skill-pill ${selectedSkill === sk.id ? "active" : ""}`}
+                style={selectedSkill === sk.id ? { borderColor: sk.color, color: sk.color, background: `${sk.color}12` } : undefined}
+                title={sk.description}
+                onClick={() => setSelectedSkill(selectedSkill === sk.id ? null : sk.id)}
+              >
+                {sk.short_label}
+              </button>
+            ))}
           </div>
 
           <div className="agent-box">
             <textarea
               ref={consoleRef}
-              placeholder="Query cohorts, gene signatures, pathways, targets, compounds, or SMILES..."
+              placeholder="Ask a multi-step research question (e.g. Find reversal drugs for DKD glomeruli, rescue toxic hits, and verify literature) or follow up with #1 / #2..."
               value={prompt}
               onChange={(e) => setPrompt(e.target.value)}
               onKeyDown={(e) => {
@@ -87,29 +137,47 @@ export default function Home() {
             <div className="agent-box-bar">
               <button type="button" onClick={() => run()} disabled={loading}>
                 {loading && <span className="spinner" />}
-                {loading ? "Executing..." : "Run Agent"}
+                {loading ? "Researching..." : "Run Research"}
               </button>
-              <button
-                type="button"
-                className="ghost"
-                onClick={() => {
-                  setPrompt("");
-                  clearResult();
-                }}
-              >
+              {loading && (
+                <button type="button" className="ghost" onClick={stop}>
+                  Stop
+                </button>
+              )}
+              <button type="button" className="ghost" onClick={() => setPrompt("")}>
                 Clear
               </button>
+              {turns.length > 0 && (
+                <button type="button" className="ghost" onClick={newSession}>
+                  New Session
+                </button>
+              )}
               <span className="spacer" />
-              <label
-                className="small"
-                style={{ margin: 0, display: "flex", alignItems: "center", gap: 5 }}
-              >
+              <div className="mode-toggle" role="group" aria-label="Execution Mode">
+                <button
+                  type="button"
+                  className={agentMode === "auto" ? "active" : ""}
+                  onClick={() => setAgentMode("auto")}
+                  title="Use DeepSeek ReAct planner + deterministic engine (auto-fallback if quota exceeded)"
+                >
+                  DeepSeek ReAct
+                </button>
+                <button
+                  type="button"
+                  className={agentMode === "fast" ? "active" : ""}
+                  onClick={() => setAgentMode("fast")}
+                  title="Run deterministic multi-step pipeline without LLM calls"
+                >
+                  0-LLM Multi-Step
+                </button>
+              </div>
+              <label className="small" style={{ margin: 0, display: "flex", alignItems: "center", gap: 4 }}>
                 <input
                   type="checkbox"
-                  checked={useLLM}
-                  onChange={(e) => setUseLLM(e.target.checked)}
+                  checked={includeLiterature}
+                  onChange={(e) => setIncludeLiterature(e.target.checked)}
                 />
-                DeepSeek slot parser (optional)
+                Literature &amp; Trials
               </label>
             </div>
           </div>
@@ -152,15 +220,111 @@ export default function Home() {
         ))}
       </div>
 
+      {/* Multi-Turn Conversation Session Thread */}
+      {turns.length > 0 && (
+        <section className="session-thread" aria-label="Research Session Thread">
+          <div className="row" style={{ marginBottom: 8 }}>
+            <h2 style={{ margin: 0, fontSize: 15 }}>Active Research Session ({turns.length} turn{turns.length > 1 ? "s" : ""})</h2>
+            <span className="small muted">Session memory tracks active cohorts, #1..#15 candidates, and verified PMIDs/NCTs</span>
+            <span className="spacer" />
+            <button type="button" className="ghost mini" onClick={newSession}>
+              Reset Session
+            </button>
+          </div>
+
+          {turns.map((turn, idx) => (
+            <div key={turn.id} className="turn-block">
+              <div className="user-bubble">
+                <span className="badge blue">Turn {idx + 1}</span>
+                <span>{turn.query}</span>
+              </div>
+              <AgentResult result={turn} onRunSuggestion={(s) => run(s)} />
+            </div>
+          ))}
+
+          {/* Multi-turn follow-up bar */}
+          <div className="followup-bar" ref={threadEndRef}>
+            <input
+              type="text"
+              placeholder="Ask a follow-up in this session (e.g. Compare #1 and #2, or Check trials for #3)..."
+              value={followUp}
+              onChange={(e) => setFollowUp(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter" && followUp.trim() && !loading) {
+                  e.preventDefault();
+                  const q = followUp.trim();
+                  setFollowUp("");
+                  run(q);
+                }
+              }}
+            />
+            <button
+              type="button"
+              disabled={loading || !followUp.trim()}
+              onClick={() => {
+                const q = followUp.trim();
+                if (!q) return;
+                setFollowUp("");
+                run(q);
+              }}
+            >
+              {loading ? "Running..." : "Send Follow-Up"}
+            </button>
+          </div>
+        </section>
+      )}
+
+      {/* Multi-Step Deep Research Playbooks */}
+      <div className="row" style={{ marginBottom: 8, marginTop: turns.length ? 16 : 0 }}>
+        <h2 style={{ margin: 0, fontSize: 15 }}>Deep Research Playbooks</h2>
+        <span className="small muted">Multi-step workflows combining scoring, safety reflection &amp; live PubMed/trials</span>
+      </div>
+      <div className="example-grid" style={{ marginBottom: 14 }}>
+        {RESEARCH_PLAYBOOKS.map((pb) => (
+          <div
+            key={pb.id}
+            className="example-card"
+            style={{ "--ex-color": pb.color } as any}
+            onClick={() => run(pb.prompt, { skillId: pb.skillId })}
+            role="button"
+            tabIndex={0}
+            onKeyDown={(e) => {
+              if (e.key === "Enter" || e.key === " ") {
+                e.preventDefault();
+                run(pb.prompt, { skillId: pb.skillId });
+              }
+            }}
+          >
+            <div className="row" style={{ justifyContent: "space-between", gap: 6 }}>
+              <span className="badge" style={{ background: `${pb.color}18`, color: pb.color }}>
+                {pb.badge}
+              </span>
+              <button
+                type="button"
+                className="mini"
+                disabled={loading}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  run(pb.prompt, { skillId: pb.skillId });
+                }}
+              >
+                Run ▶
+              </button>
+            </div>
+            <div className="example-title">{pb.title}</div>
+            <div className="example-sub">{pb.subtitle}</div>
+            <div className="example-prompt" title={pb.prompt}>
+              {pb.prompt}
+            </div>
+          </div>
+        ))}
+      </div>
+
       <div className="row" style={{ marginBottom: 8 }}>
-        <h2 style={{ margin: 0, fontSize: 15 }}>Showcase Queries</h2>
-        <span className="small muted">Click card to prefill, or Run ▶ to execute immediately</span>
+        <h2 style={{ margin: 0, fontSize: 15 }}>SOP Showcase Queries (SOP-1 to SOP-6)</h2>
+        <span className="small muted">Click card to prefill, or Run ▶ to execute in the agent console</span>
       </div>
       <ExampleCards />
-
-      <div ref={resultRef}>
-        <AgentResult result={result} onRunSuggestion={(s) => run(s)} />
-      </div>
 
       <div className="card" style={{ marginTop: 14 }}>
         <h2>Knowledge Base Modules</h2>

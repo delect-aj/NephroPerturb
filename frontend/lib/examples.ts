@@ -1,3 +1,56 @@
+export interface ResearchPlaybook {
+  id: string;
+  skillId: string;
+  badge: string;
+  title: string;
+  subtitle: string;
+  color: string;
+  prompt: string;
+}
+
+export const RESEARCH_PLAYBOOKS: ResearchPlaybook[] = [
+  {
+    id: "pb-disease-evidence",
+    skillId: "disease-repurposing",
+    badge: "Disease -> Evidence",
+    title: "DKD Reversal + Safety + Literature",
+    subtitle: "Cohort screen -> auto filter Low T-DIKI -> top-2 PubMed & clinical trials",
+    color: "#2563eb",
+    prompt:
+      "Find reversal drugs for the DKD glomeruli case, auto-filter High T-DIKI hits if needed, and verify literature & clinical trials for top candidates",
+  },
+  {
+    id: "pb-tox-rescue",
+    skillId: "toxicity-rescue",
+    badge: "Safety & Rescue",
+    title: "Tacrolimus Toxicity Rescue",
+    subtitle: "T-DIKI attribution -> safer Low-DIKI analogs -> nephrotoxicity papers",
+    color: "#dc2626",
+    prompt:
+      "Is tacrolimus nephrotoxic? Explain T-DIKI drivers, audit safety literature, and find safer Low-DIKI structural analogs",
+  },
+  {
+    id: "pb-target-lead",
+    skillId: "target-to-lead",
+    badge: "Target -> Lead",
+    title: "TGFBR1 Target-to-Lead Dossier",
+    subtitle: "Nephron expression -> knockdown mimics -> lead safety & PubMed",
+    color: "#d97706",
+    prompt:
+      "Analyze TGFBR1 in kidney disease: check nephron expression, top knockdown-mimicking drugs, lead safety, and literature evidence",
+  },
+  {
+    id: "pb-compare",
+    skillId: "compound-compare",
+    badge: "Compare Drugs",
+    title: "Dexamethasone vs. Losartan",
+    subtitle: "Head-to-head renal fibrosis modules, podocyte scores & literature",
+    color: "#0d9488",
+    prompt:
+      "Compare dexamethasone and losartan head-to-head on renal fibrosis modules, podocyte protection, T-DIKI safety, and kidney literature",
+  },
+];
+
 export interface AgentExample {
   id: string;
   title: string;

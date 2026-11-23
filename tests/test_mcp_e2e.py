@@ -12,7 +12,9 @@ import os
 URL = os.environ.get("NEPHRO_MCP_URL", "http://127.0.0.1:8092/mcp")
 REQUIRED = {"nephro_query_signature", "nephro_profile_compound",
             "nephro_query_pathway_tf", "nephro_target_mimicry",
-            "nephro_infer_moa", "nephro_list_renal_cases"}
+            "nephro_infer_moa", "nephro_list_renal_cases",
+            "nephro_search_literature", "nephro_search_clinical_trials",
+            "nephro_compare_compounds"}
 
 
 def payload(res):
@@ -52,6 +54,14 @@ async def main():
                 ("nephro_infer_moa", {"pert_id": "BRD-K11433652", "top_k": 3},
                  lambda d: d["results"]),
                 ("nephro_list_renal_cases", {}, lambda d: d["cases"]),
+                ("nephro_compare_compounds", {"tokens": ["dexamethasone", "losartan"]},
+                 lambda d: len(d.get("compounds", [])) == 2),
+                ("nephro_search_literature",
+                 {"entity": "dexamethasone", "disease_context": "DKD", "include_safety": False, "max_papers": 3},
+                 lambda d: "evidence_tier" in d),
+                ("nephro_search_clinical_trials",
+                 {"compound": "dexamethasone", "condition": "kidney disease", "max_trials": 2},
+                 lambda d: "total_count" in d),
             ]
             for name, args, check in checks:
                 res = await session.call_tool(name, args)

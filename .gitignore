@@ -20,3 +20,4 @@ store_lite/
 .venv-lite/
 .lite.pid
 logs/
+var/

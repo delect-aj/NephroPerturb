@@ -65,13 +65,16 @@ bash deploy/bootstrap_lite.sh ~/renalkb
    - REST API：`http://<host>:8091/api/v1/...`
    - MCP Server（Streamable HTTP）：`http://<host>:8091/mcp`
 
-### 第 4 步：配置 DeepSeek API Key（可选）
+### 第 4 步：配置 DeepSeek API Key 与访客每小时限流（推荐）
 ```bash
 cd ~/renalkb
 cp -n .env.example .env && chmod 600 .env
-# 如需启用 DeepSeek 自然语言路由与总结，编辑 .env 填入 DEEPSEEK_API_KEY=<新Key>
-# 不配置时系统自动工作在 0-LLM 纯确定性模式，功能 100% 正常
+# 编辑 .env 填入你自己的 DEEPSEEK_API_KEY=<新Key>
+# 默认按 IP 限流 AGENT_LLM_HOURLY_LIMIT_PER_IP=20、全局每日上限 AGENT_LLM_DAILY_GLOBAL_LIMIT=500；
+# 访客超出限流或未配置 Key 时，系统会自动平滑降级到 0-LLM 多步确定性调研流水线（照样包含毒性反思 + PubMed/Europe PMC 文献 + 临床试验汇总）
 ```
+
+> **提示**：文献检索优先调用 `ebi.ac.uk`（Europe PMC），若当前网络无法访问或超时会自动熔断并切换至 NCBI PubMed（结果在 `var/agent_state.db` 缓存 7 天）。若前面挂 Nginx 反代，请同步采用新版 `deploy/nginx-lite.conf.example`（包含 `/api/v1/agent/stream` 禁用缓冲规则 `proxy_buffering off`）。
 
 ### 第 5 步：配置常驻守护与硬资源限制（推荐）
 将用户级 `systemd` 服务写入 `~/.config/systemd/user/nephroperturb-lite.service`（模板已提供在 `deploy/nephroperturb-lite.service`，内置硬上限 **`CPUQuota=100%`、`AllowedCPUs=0`、`MemoryHigh=850M`、`MemoryMax=1024M`**）：
@@ -96,7 +99,7 @@ rm -rf frontend/out            # 清理早期 rsync 的未跟踪目录（v1.1.0 
 git pull origin main
 systemctl --user restart nephroperturb-lite
 sleep 3 && curl -fsS http://127.0.0.1:8091/health && echo
-# 预期输出包含 "version":"1.1.2","mode":"lite","mcp_mounted":true
+# 预期输出包含 "version":"1.2.0","mode":"lite","mcp_mounted":true
 ```
 
 ---
@@ -106,13 +109,17 @@ sleep 3 && curl -fsS http://127.0.0.1:8091/health && echo
 ```bash
 # 1) 查看服务健康与 Lite 模式确认
 curl -fsS http://127.0.0.1:8091/health
-# 预期输出包含 "version":"1.1.2","mode":"lite","mcp_mounted":true
+# 预期输出包含 "version":"1.2.0","mode":"lite","mcp_mounted":true
 
-# 2) 验证 Web 静态界面与单端口 MCP
+# 2) 验证 Agent 状态（DeepSeek 配置与每小时剩余配额）与 6 个 Skill
+curl -fsS http://127.0.0.1:8091/api/v1/agent/status && echo
+curl -fsS http://127.0.0.1:8091/api/v1/agent/skills | head -c 400 && echo
+
+# 3) 验证 Web 静态界面与单端口 MCP（9 工具）
 curl -fsS -o /dev/null -w "UI %{http_code}\n" http://127.0.0.1:8091/
 NEPHRO_MCP_URL=http://127.0.0.1:8091/mcp python tests/test_mcp_e2e.py
 
-# 3) 实测单进程实时内存、峰值内存与 1 核绑定
+# 4) 实测单进程实时内存、峰值内存与 1 核绑定
 PID=$(pgrep -f "uvicorn app.main:app" | head -n 1)
 grep -E "VmRSS|VmHWM|Threads|Cpus_allowed_list" /proc/$PID/status
 ```

@@ -3,10 +3,10 @@ export default function DocsPage() {
     <>
       <div className="page-head">
         <h1>API &amp; MCP Docs</h1>
-        <span className="badge blue">v1.1.2</span>
+        <span className="badge blue">v1.2.0</span>
       </div>
       <div className="sub">
-        Deterministic REST endpoints and Streamable HTTP MCP tools. Optional LLM parsing is limited to slot extraction with zero ungrounded generation.
+        Skill-guided DeepSeek ReAct agent with SSE streaming, Europe PMC / PubMed + ClinicalTrials.gov evidence, deterministic scoring, and 9 MCP tools.
       </div>
 
       <div className="grid cols-2">
@@ -22,14 +22,18 @@ export default function DocsPage() {
             </thead>
             <tbody>
               {[
-                ["/api/v1/agent/run", "POST", "Deterministic SOP executor: route -> resolve -> tool -> summary"],
-                ["/api/v1/agent/route", "POST", "SOP intent & parameter extraction"],
-                ["/api/v1/agent/summarize", "POST", "Entity/number-verified summary builder"],
+                ["/api/v1/agent/stream", "POST", "SSE multi-turn ReAct / deterministic multi-step research stream"],
+                ["/api/v1/agent/status", "GET", "Server LLM readiness, rolling IP hourly quota & provider info"],
+                ["/api/v1/agent/skills", "GET", "List the 6 declarative SKILL.md playbooks & execution policy"],
+                ["/api/v1/agent/session/{id}", "GET/DELETE", "Inspect or reset multi-turn research session ledger"],
+                ["/api/v1/agent/run", "POST", "Legacy single-turn deterministic SOP executor"],
+                ["/api/v1/literature/search", "POST", "Bidirectional kidney efficacy & nephrotoxicity literature + trials"],
+                ["/api/v1/compounds/compare", "POST", "Head-to-head comparison (2-4 compounds) on safety & renal modules"],
                 ["/api/v1/query/signature", "POST", "Multi-scale gene-signature reversal (RTPS)"],
                 ["/api/v1/query/pathway-tf", "POST", "Pathway / TF / renal module search"],
                 ["/api/v1/compound/{id}", "GET", "Compound kidney profile & K-PRL signature"],
                 ["/api/v1/compound/{id}/explain", "GET", "T-DIKI v2 attribution"],
-                ["/api/v1/target/{symbol}", "GET", "Target expression, drugs & mimicry"],
+                ["/api/v1/target/{symbol}", "GET", "Target expression, drugs & knockdown mimicry"],
                 ["/api/v1/similarity/structure", "POST", "ECFP4 Tanimoto search & MoA neighbors"],
                 ["/api/v1/cases", "GET", "QC-validated GEO renal cohorts"],
                 ["/api/v1/downloads", "GET", "GMT download manifest & SHA-256"],
@@ -47,57 +51,55 @@ export default function DocsPage() {
         </div>
 
         <div className="card">
-          <h2>Quick cURL &amp; MCP Config</h2>
-          <pre className="pre">{`# Deterministic Agent (0-LLM rules)
-curl -X POST http://<host>:8091/api/v1/agent/run \\
+          <h2>Execution Policy, Guardrails &amp; MCP</h2>
+          <pre className="pre">{`# SSE Research Stream (Auto DeepSeek ReAct + quota fallback)
+curl -N -X POST http://<host>:8091/api/v1/agent/stream \\
   -H "Content-Type: application/json" \\
-  -d '{"text":"Find reversal drugs for the DKD glomeruli case","use_llm":false}'
+  -d '{"text":"Find DKD reversal drugs & check literature","mode":"auto"}'
 
-# Signature reversal query
-curl -X POST http://<host>:8091/api/v1/query/signature \\
+# Bidirectional Literature & ClinicalTrials Search
+curl -X POST http://<host>:8091/api/v1/literature/search \\
   -H "Content-Type: application/json" \\
-  -d '{"up_genes":["COL1A1","TGFB1"],"down_genes":["NPHS1","PPARA"],"top_k":20}'
+  -d '{"entity":"dexamethasone","disease_context":"DKD"}'
 
-# MCP Streamable HTTP (Lite :8091/mcp | Standalone :8092/mcp)
+# MCP Streamable HTTP (9 tools on :8091/mcp)
 {
   "mcpServers": {
     "nephroperturb": { "url": "http://<host>:8091/mcp" }
   }
 }`}</pre>
-          <p className="small muted" style={{ marginTop: 8 }}>
-            Every run returns a <span className="mono">job_id</span> and <span className="mono">provenance</span> hash archived in SQLite <span className="mono">job_provenance</span>.
-          </p>
+          <ul className="small muted" style={{ paddingLeft: 18, marginTop: 8 }}>
+            <li><strong>Reproducibility</strong>: DeepSeek pinned at <code>temperature=0.0</code>, <code>seed=42</code>, and scoped strictly per Skill tool allowlist.</li>
+            <li><strong>Zero Hallucination</strong>: Verifier rejects fabricated PMIDs, NCT IDs, BRD IDs, or invented scores with 1x surgical repair or deterministic fallback.</li>
+            <li><strong>Rate Limiting</strong>: Public visitors share configurable rolling hourly per-IP &amp; daily caps (auto-degrades to 0-LLM multi-step when reached).</li>
+          </ul>
         </div>
       </div>
 
       <div className="grid cols-2" style={{ marginTop: 12 }}>
         <div className="card">
-          <h2>Deterministic Agent SOP Rules</h2>
+          <h2>6 Modular Agent Skills</h2>
           <table>
             <thead>
               <tr>
-                <th>SOP</th>
-                <th>Trigger Keywords</th>
-                <th>MCP Tool</th>
-                <th>Example Prompt</th>
+                <th>Skill ID</th>
+                <th>Steps</th>
+                <th>Allowed Tools &amp; Playbook</th>
               </tr>
             </thead>
             <tbody>
               {[
-                ["SOP-1", "up:, down:, signature, approved, low risk", "nephro_query_signature", "Up: COL1A1 FN1 TGFB1; Down: NPHS1 PPARA"],
-                ["SOP-2", "profile, safety, nephrotoxic, MoA", "nephro_profile_compound", "Is tacrolimus nephrotoxic?"],
-                ["SOP-3", "pathway, signaling, TF, inhibit, activate", "nephro_query_pathway_tf", "Inhibit SMAD3 and TGFb, activate PPARA"],
-                ["SOP-4", "target, knockout, knockdown, mimic, CRISPR", "nephro_target_mimicry", "Which compounds mimic knockdown of TGFBR1?"],
-                ["SOP-5", "SMILES, similar, structure, analog, BRD-", "nephro_infer_moa", "Find compounds structurally similar to CC(=O)OC1=CC=CC=C1C(=O)O"],
-                ["SOP-6", "case, cohort, DKD, LN, IgAN, CKD, AKI", "nephro_run_renal_case", "Find reversal drugs for the DKD glomeruli case"],
-              ].map(([sop, kw, tool, ex]) => (
-                <tr key={sop}>
-                  <td>
-                    <span className="badge blue">{sop}</span>
-                  </td>
-                  <td className="small">{kw}</td>
-                  <td className="mono small">{tool}</td>
-                  <td className="small mono">{ex}</td>
+                ["disease-repurposing", "6", "Cohort/signature/pathway screen -> auto Low T-DIKI re-screen -> top-2 PubMed/trials"],
+                ["toxicity-rescue", "5", "Compound profile -> T-DIKI attribution -> Low-DIKI structural analogs -> safety papers"],
+                ["target-to-lead", "5", "Nephron target expression -> knockdown mimicry -> lead safety -> PubMed"],
+                ["structure-moa-evidence", "4", "ECFP4 Tanimoto scan -> consensus MoA -> neighbor safety -> kidney literature"],
+                ["literature-evidence", "5", "Bidirectional Europe PMC / PubMed + ClinicalTrials.gov -> Novelty & evidence tier"],
+                ["compound-compare", "5", "2-4 compound matrix (T-DIKI, PROGENy, 9 renal modules) + trials/papers"],
+              ].map(([id, st, desc]) => (
+                <tr key={id}>
+                  <td className="mono small">{id}</td>
+                  <td className="mono small">{st}</td>
+                  <td className="small">{desc}</td>
                 </tr>
               ))}
             </tbody>
@@ -105,7 +107,7 @@ curl -X POST http://<host>:8091/api/v1/query/signature \\
         </div>
 
         <div className="card">
-          <h2>MCP Tool Inventory</h2>
+          <h2>MCP Tool Inventory (9 Tools)</h2>
           <table>
             <thead>
               <tr>
@@ -121,6 +123,9 @@ curl -X POST http://<host>:8091/api/v1/query/signature \\
                 ["nephro_target_mimicry", "Compounds mimicking genetic knockdown of a target"],
                 ["nephro_infer_moa", "ECFP4 structural neighbor MoA inference"],
                 ["nephro_list_renal_cases", "Curated GEO human kidney biopsy cohorts"],
+                ["nephro_search_literature", "Bidirectional Europe PMC / PubMed efficacy + nephrotoxicity search"],
+                ["nephro_search_clinical_trials", "ClinicalTrials.gov v2 kidney study lookup"],
+                ["nephro_compare_compounds", "Head-to-head renal pathway, module & safety comparison"],
               ].map(([a, b]) => (
                 <tr key={a}>
                   <td className="mono small">{a}</td>

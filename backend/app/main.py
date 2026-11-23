@@ -1,4 +1,5 @@
 """NephroPerturb REST API (OpenAPI 3.1 via FastAPI) + optional unified MCP & static UI."""
+import asyncio
 from contextlib import asynccontextmanager
 import hashlib
 import json
@@ -11,9 +12,9 @@ from typing import Dict, List, Optional
 
 import numpy as np
 import pandas as pd
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import FileResponse, RedirectResponse
+from fastapi.responses import FileResponse, RedirectResponse, StreamingResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field
 from starlette.datastructures import MutableHeaders
@@ -24,8 +25,15 @@ from .agent import route as agent_route, summarize as agent_summarize
 from .agent_runner import run_agent
 from .core.store import get_store
 from .engine import tdiki as tdiki_explain
+from .engine.compare import compare_compounds
+from .engine.literature import search_clinical_trials, search_kidney_literature
 from .engine.lookup import structure_similarity_search, target_mimicry_top
 from .engine.scoring import score_pathway_tf, score_signature
+from .model_policy import get_policy
+from .rate_limit import check_llm_quota, extract_client_ip
+from .react_agent import execute_agent_stream
+from .session_store import delete_session, load_session
+from .skills_loader import list_skills
 
 _MOUNT_MCP = os.environ.get("NEPHRO_MOUNT_MCP", "0") == "1"
 _STATIC_DIR = os.environ.get("NEPHRO_STATIC_DIR", "").strip()
@@ -54,8 +62,11 @@ class _SelectiveGZipAndCacheMiddleware:
             await self.app(scope, receive, send)
             return
         path = scope.get("path", "")
-        if path == "/mcp" or path.startswith("/mcp/") or (
-            path.startswith("/downloads/") and path != "/downloads/"
+        if (
+            path == "/mcp"
+            or path.startswith("/mcp/")
+            or path == "/api/v1/agent/stream"
+            or (path.startswith("/downloads/") and path != "/downloads/")
         ):
             await self.app(scope, receive, send)
             return
@@ -77,7 +88,7 @@ class _SelectiveGZipAndCacheMiddleware:
         await self.gzip_app(scope, receive, send_with_cache)
 
 
-app = FastAPI(title="NephroPerturb API", version="1.1.2", lifespan=lifespan)
+app = FastAPI(title="NephroPerturb API", version="1.2.0", lifespan=lifespan)
 app.add_middleware(_SelectiveGZipAndCacheMiddleware)
 app.add_middleware(CORSMiddleware, allow_origins=["*"], allow_methods=["*"],
                    allow_headers=["*"])
@@ -135,6 +146,26 @@ class AgentRunRequest(BaseModel):
     use_llm: bool = False
 
 
+class AgentStreamRequest(BaseModel):
+    text: str
+    session_id: Optional[str] = None
+    mode: str = "auto"
+    skill_id: Optional[str] = None
+    include_literature: bool = True
+
+
+class LiteratureSearchRequest(BaseModel):
+    entity: str
+    disease_context: str = "kidney disease"
+    include_safety: bool = True
+    max_papers: int = 6
+    include_trials: bool = True
+
+
+class CompareRequest(BaseModel):
+    tokens: List[str]
+
+
 class SummarizeRequest(BaseModel):
     results: Dict
     question: str = ""
@@ -145,7 +176,9 @@ class SummarizeRequest(BaseModel):
 def health():
     store = get_store()
     return {"status": "ok",
-            "version": "1.1.2",
+            "version": "1.2.0",
+            "agent_version": "1.2.0",
+            "llm_configured": bool(os.environ.get("DEEPSEEK_API_KEY", "").strip()),
             "mode": "lite" if store.is_lite else "full",
             "mcp_mounted": _MOUNT_MCP,
             "compounds": int(len(store.cp_index)),
@@ -381,14 +414,42 @@ def get_case(case_id: str):
     return result
 
 
+def get_case_filtered(case_id: str, filters: Dict = None, top_k: int = 15):
+    store = get_store()
+    con = store.db()
+    try:
+        frame = pd.read_sql("SELECT * FROM renal_case_studies WHERE case_id = ?",
+                            con, params=(case_id,))
+    finally:
+        con.close()
+    if frame.empty:
+        raise HTTPException(status_code=404, detail="case not found")
+    row = frame.iloc[0]
+    up = json.loads(row["up_genes_json"])
+    down = json.loads(row["down_genes_json"])
+    disease_code = row["disease_code"] if "disease_code" in row.index else None
+    with _COMPUTE_LOCK:
+        result = score_signature(up, down, context="auto",
+                                 disease=disease_code,
+                                 compartment=row["compartment"],
+                                 filters=filters or {},
+                                 top_k=top_k)
+    result["case"] = json.loads(frame.to_json(orient="records"))[0]
+    result["job_id"] = persist_job(get_store(), "SOP-6", {"case_id": case_id, "filters": filters or {}}, result)
+    return result
+
+
 _AGENT_TOOLS = {
     "signature": lambda **kw: query_signature(SignatureRequest(**kw)),
     "pathway": lambda **kw: query_pathway_tf(PathwayRequest(**kw)),
     "compound": compound_profile,
+    "explain": compound_explain,
     "target": target_profile,
     "structure": lambda **kw: similarity(StructureRequest(**kw)),
     "list_cases": list_cases,
     "case": get_case,
+    "case_filtered": get_case_filtered,
+    "compare": compare_compounds,
     "find_compound": lambda tok: get_store().find_compound(tok),
 }
 
@@ -401,6 +462,133 @@ def api_agent_route(req: AgentRequest):
 @app.post("/api/v1/agent/run")
 def api_agent_run(req: AgentRunRequest):
     return run_agent(req.text, use_llm=req.use_llm, tools=_AGENT_TOOLS)
+
+
+@app.get("/api/v1/agent/skills")
+def api_agent_skills():
+    return {
+        "skills": list_skills(),
+        "policy": get_policy().as_public_dict(),
+    }
+
+
+@app.get("/api/v1/agent/status")
+def api_agent_status(request: Request):
+    client_ip = extract_client_ip(request)
+    policy = get_policy()
+    return {
+        "version": "1.2.0",
+        "llm_configured": bool(os.environ.get("DEEPSEEK_API_KEY", "").strip()),
+        "model": policy.model,
+        "quota": check_llm_quota(client_ip),
+        "literature_primary": "Europe PMC",
+        "literature_fallback": "NCBI PubMed",
+        "clinical_trials": "ClinicalTrials.gov v2",
+        "skills_count": len(list_skills()),
+    }
+
+
+@app.get("/api/v1/agent/session/{session_id}")
+def api_get_session(session_id: str):
+    return load_session(session_id)
+
+
+@app.delete("/api/v1/agent/session/{session_id}")
+def api_delete_session(session_id: str):
+    return {"deleted": delete_session(session_id), "session_id": session_id}
+
+
+def _sse_frame(event_name: str, data: dict) -> bytes:
+    payload = json.dumps(data, ensure_ascii=False, default=str)
+    return f"event: {event_name}\ndata: {payload}\n\n".encode("utf-8")
+
+
+@app.post("/api/v1/agent/stream")
+async def api_agent_stream(req: AgentStreamRequest, request: Request):
+    client_ip = extract_client_ip(request)
+    loop = asyncio.get_running_loop()
+    queue: asyncio.Queue = asyncio.Queue()
+    cancel_event = threading.Event()
+    sentinel = object()
+
+    def emit(ev: str, payload: dict):
+        loop.call_soon_threadsafe(queue.put_nowait, (ev, payload))
+
+    def worker():
+        try:
+            execute_agent_stream(
+                query=req.text,
+                tools=_AGENT_TOOLS,
+                emit=emit,
+                session_id=req.session_id,
+                mode=req.mode,
+                skill_id=req.skill_id,
+                include_literature=req.include_literature,
+                client_ip=client_ip,
+                cancel_event=cancel_event,
+            )
+        except Exception as exc:
+            emit("error", {"message": str(exc)[:240]})
+        finally:
+            loop.call_soon_threadsafe(queue.put_nowait, sentinel)
+
+    thread = threading.Thread(target=worker, daemon=True)
+    thread.start()
+
+    async def event_generator():
+        try:
+            while True:
+                if await request.is_disconnected():
+                    cancel_event.set()
+                    break
+                try:
+                    item = await asyncio.wait_for(queue.get(), timeout=2.0)
+                except asyncio.TimeoutError:
+                    yield b": keepalive\n\n"
+                    continue
+                if item is sentinel:
+                    break
+                ev_name, data = item
+                yield _sse_frame(ev_name, data)
+        finally:
+            cancel_event.set()
+
+    return StreamingResponse(
+        event_generator(),
+        media_type="text/event-stream",
+        headers={
+            "Cache-Control": "no-cache",
+            "Connection": "keep-alive",
+            "X-Accel-Buffering": "no",
+        },
+    )
+
+
+@app.post("/api/v1/literature/search")
+def api_literature_search(req: LiteratureSearchRequest):
+    try:
+        lit = search_kidney_literature(
+            req.entity,
+            disease_context=req.disease_context,
+            include_safety=req.include_safety,
+            max_papers=req.max_papers,
+        )
+    except ValueError as exc:
+        raise HTTPException(status_code=422, detail=str(exc))
+    trials = None
+    if req.include_trials:
+        trials = search_clinical_trials(req.entity, condition=req.disease_context, max_trials=5)
+    return {"literature": lit, "clinical_trials": trials}
+
+
+@app.post("/api/v1/compounds/compare")
+def api_compounds_compare(req: CompareRequest):
+    try:
+        return compare_compounds(req.tokens)
+    except ValueError as exc:
+        raise HTTPException(status_code=422, detail=str(exc))
+    except LookupError as exc:
+        raise HTTPException(status_code=404, detail=str(exc))
 
 
 @app.post("/api/v1/agent/summarize")

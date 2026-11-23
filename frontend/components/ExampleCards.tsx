@@ -13,13 +13,13 @@ export default function ExampleCards() {
           key={ex.id}
           className="example-card"
           style={{ "--ex-color": ex.color } as CSSProperties}
-          onClick={() => fill(ex.prompt)}
+          onClick={() => fill(ex.prompt, null)}
           role="button"
           tabIndex={0}
           onKeyDown={(e) => {
             if (e.key === "Enter" || e.key === " ") {
               e.preventDefault();
-              fill(ex.prompt);
+              fill(ex.prompt, null);
             }
           }}
         >
@@ -33,7 +33,7 @@ export default function ExampleCards() {
               disabled={loading}
               onClick={(e) => {
                 e.stopPropagation();
-                run(ex.prompt);
+                run(ex.prompt, { skillId: null });
               }}
             >
               Run ▶
