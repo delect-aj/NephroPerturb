@@ -6,13 +6,13 @@ import { useAgent } from "@/components/AgentContext";
 import AgentResult from "@/components/AgentResult";
 import { QUICK_EXAMPLES } from "@/lib/examples";
 
-const STATS = [
+const STATS: Array<[string, string, string?]> = [
   ["21,299", "Compounds"],
   ["12,328", "L1000 Genes"],
   ["591,697", "Level-5 Profiles"],
   ["9,888", "IK-14 Scaffolds"],
   ["31,082", "Genetic Perturbs"],
-  ["6", "Agent Skills"],
+  ["6", "Agent Skills", "/skills"],
 ];
 
 const HOW_STEPS = [
@@ -274,12 +274,21 @@ export default function Home() {
 
       {/* Platform Overview: KPI Stats & 4-Step Pipeline */}
       <div className="grid cols-6" style={{ marginBottom: 12, marginTop: 14 }}>
-        {STATS.map(([v, l]) => (
-          <div className="card kpi-card" key={l}>
-            <div className="stat">{v}</div>
-            <div className="stat-label">{l}</div>
-          </div>
-        ))}
+        {STATS.map(([v, l, href]) =>
+          href ? (
+            <Link key={l} href={href} prefetch={false} className="card kpi-card kpi-link" title="View all 6 Agent Skills and step-by-step logic">
+              <div className="stat">{v}</div>
+              <div className="stat-label">
+                {l} <span className="kpi-arrow">→</span>
+              </div>
+            </Link>
+          ) : (
+            <div className="card kpi-card" key={l}>
+              <div className="stat">{v}</div>
+              <div className="stat-label">{l}</div>
+            </div>
+          )
+        )}
       </div>
 
       <div className="how-strip">

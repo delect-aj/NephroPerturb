@@ -66,6 +66,13 @@ function Icon({ name }: { name: string }) {
           <path d="M8 9h8M8 13h8M8 17h5" />
         </svg>
       );
+    case "skills":
+      return (
+        <svg {...p}>
+          <path d="M4 7h16M4 12h10M4 17h13" />
+          <circle cx="18" cy="12" r="2" />
+        </svg>
+      );
     case "downloads":
       return (
         <svg {...p}>
@@ -84,6 +91,7 @@ function Icon({ name }: { name: string }) {
 
 const LINKS = [
   ["/", "Agent Console", "agent"],
+  ["/skills", "Agent Skills", "skills"],
   ["/workbench", "Signature Workbench", "workbench"],
   ["/pathway-tf", "Pathway & TF Search", "pathway"],
   ["/target", "Target & Genetics", "target"],

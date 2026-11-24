@@ -744,3 +744,118 @@ button.quick-example-card.filled {
   color: #475569;
   font-weight: 600;
 }
+
+/* Clickable KPI Card Link */
+a.kpi-link {
+  display: block;
+  text-decoration: none;
+  color: inherit;
+  border-color: #bfdbfe;
+  background: linear-gradient(180deg, #ffffff 0%, #f0f9ff 100%);
+  transition: transform 0.12s ease, box-shadow 0.12s ease, border-color 0.12s ease;
+}
+a.kpi-link:hover {
+  transform: translateY(-1px);
+  box-shadow: var(--shadow-md);
+  border-color: var(--accent);
+}
+a.kpi-link .stat-label {
+  color: #0369a1;
+  font-weight: 600;
+}
+.kpi-arrow {
+  display: inline-block;
+  transition: transform 0.12s ease;
+}
+a.kpi-link:hover .kpi-arrow {
+  transform: translateX(2px);
+}
+
+/* Skills Logic Catalog Page */
+.route-step-card {
+  background: var(--panel-soft);
+  border: 1px solid var(--line);
+  border-radius: 9px;
+  padding: 10px 12px;
+}
+.skills-catalog-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+@media (max-width: 980px) {
+  .skills-catalog-grid {
+    grid-template-columns: 1fr;
+  }
+}
+.skill-doc-card {
+  border-top: 3px solid var(--skill-color, var(--accent));
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.skill-doc-title {
+  margin: 0;
+  font-size: 15.5px;
+  font-weight: 700;
+  color: var(--ink);
+}
+.skill-when-box {
+  font-size: 12.2px;
+  color: #334155;
+  background: var(--panel-soft);
+  border: 1px solid var(--line);
+  border-radius: 7px;
+  padding: 6px 9px;
+}
+.skill-steps-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin: 2px 0;
+}
+.skill-step-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 9px;
+  padding: 7px 9px;
+  border-radius: 8px;
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+}
+.skill-step-num {
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  color: #ffffff;
+  font-size: 11px;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  margin-top: 1px;
+}
+.skill-step-body {
+  flex: 1;
+  min-width: 0;
+}
+.skill-step-head {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-bottom: 2px;
+  font-size: 12.8px;
+}
+.skill-step-tools {
+  display: inline-flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+.skill-doc-foot {
+  margin-top: auto;
+  padding-top: 8px;
+  border-top: 1px solid var(--line);
+  line-height: 1.45;
+}
