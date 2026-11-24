@@ -70,8 +70,8 @@ curl -X POST http://<host>:8091/api/v1/literature/search \\
 }`}</pre>
           <ul className="small muted" style={{ paddingLeft: 18, marginTop: 8 }}>
             <li><strong>Reproducibility</strong>: DeepSeek pinned at <code>temperature=0.0</code>, <code>seed=42</code>, and scoped strictly per Skill tool allowlist.</li>
-            <li><strong>Zero Hallucination</strong>: Verifier rejects fabricated PMIDs, NCT IDs, BRD IDs, or invented scores with 1x surgical repair or deterministic fallback.</li>
-            <li><strong>Rate Limiting</strong>: Public visitors share configurable rolling hourly per-IP &amp; daily caps (auto-degrades to 0-LLM multi-step when reached).</li>
+            <li><strong>Zero Hallucination</strong>: Automated verification cross-checks every reported PMID, NCT identifier, compound ID, and score against retrieved source records.</li>
+            <li><strong>Rate Limiting</strong>: Public visitors share configurable rolling hourly per-IP &amp; daily caps (auto-degrades to rule-based fast mode when reached).</li>
           </ul>
         </div>
       </div>

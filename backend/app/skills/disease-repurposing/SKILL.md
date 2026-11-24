@@ -1,8 +1,8 @@
 ---
 id: disease-repurposing
 name: Disease-to-Evidence Repurposing
-short_label: Disease -> Evidence
-description: Screen cohorts, gene signatures, or pathways with automatic high-toxicity re-screening and integrated literature review.
+short_label: Disease Repurposing
+description: Screen kidney cohorts, gene signatures, or pathways with automatic high-toxicity filtering and integrated literature review.
 color: "#2563eb"
 max_steps: 6
 allowed_tools:
@@ -22,19 +22,19 @@ output_sections:
 example_prompt: "Find reversal drugs for the DKD glomeruli case, auto-filter High T-DIKI hits if needed, and verify literature & clinical trials for top candidates"
 ---
 ## Execution Protocol
-1. Run one screen (`run_cohort_case`, `score_gene_signature`, or `query_pathway_tf`).
-2. Inspect Top-3 hits: if any has `tdiki_tier == "High"` or `diril_label == 1`, AUTOMATICALLY run a safe re-screen (`approved_only=true, max_diki_tier="Low"`) or `find_safe_analogs`.
+1. Run one primary screen (`run_cohort_case`, `score_gene_signature`, or `query_pathway_tf`).
+2. Inspect the top 3 hits: if any candidate has `tdiki_tier == "High"` or `diril_label == 1`, automatically run a filtered re-screen (`approved_only=true, max_diki_tier="Low"`) or `find_safe_analogs`.
 3. Call `profile_compound` using the **exact `pert_id` (`BRD-...`)** of the #1 safe candidate.
-4. Batch `search_literature` + `search_clinical_trials` for the Top 1-2 safe candidates (by name) in the active disease context.
+4. Batch `search_literature` + `search_clinical_trials` for the top 1-2 safe candidates (by compound name) in the active disease context.
 
-## Fixed Output Format (Cohesive Academic Prose — No Mechanical Bullet Listing)
+## Fixed Output Format (Natural Biomedical Prose — Never Print Raw JSON Variable Names like `tdiki_tier` or `diril_label`)
 ### 1. Executive Synthesis & Prioritized Candidates
-Write 2-3 cohesive sentences stating the screened cohort/signature, whether auto-filtering ran, and why the top leads stand out, followed by a compact 3-row Markdown table (`Rank | Compound | pert_id | Score | T-DIKI | DIRIL | Phase`).
+Write 2-3 cohesive sentences stating the screened cohort or signature, whether high-toxicity filtering was triggered, and why the top leads are prioritized, followed by a compact 3-row Markdown table (`Rank | Compound | pert_id | Score | T-DIKI | DIRIL | Phase`).
 ### 2. Mechanistic & NephroSafe Rationale
-Write one flowing paragraph explaining how the #1 profiled candidate's MoA, PROGENy pathways, renal modules, and key K-PRL genes counter disease pathology while preserving renal safety.
+Write one flowing paragraph explaining how the top candidate's MoA, targets, PROGENy pathways, and renal modules counter disease pathology while preserving renal safety.
 ### 3. Integrated Literature & Clinical Review
-Write **two cohesive prose paragraphs** (do NOT use choppy key-value bullets):
-- Paragraph 1 (*Therapeutic Evidence & Novelty*): Synthesize concrete preclinical/clinical findings across the retrieved paper `takeaway`s with inline `[PMID:<digits>]`, distinguishing direct kidney efficacy from indirect mentions or `Novel (0 renal papers)` gaps.
-- Paragraph 2 (*Renal Safety & Clinical Pipeline*): Integrate published nephrotoxicity reports (`[PMID:<digits>]`) with NephroSafe T-DIKI/DIRIL risk, and summarize registered kidney trials (`[NCT<8-digits>]`, phase/status).
+Write **two cohesive prose paragraphs** (do not use mechanical key-value bullet lists):
+- Paragraph 1 (*Therapeutic Evidence & Novelty*): Synthesize preclinical and clinical findings across the retrieved studies with inline `[PMID:<digits>]` citations, distinguishing established renal efficacy from novel repurposing leads with no prior kidney publications.
+- Paragraph 2 (*Renal Safety & Clinical Trial Landscape*): Integrate published nephrotoxicity reports (`[PMID:<digits>]`) with predicted T-DIKI and FDA DIRIL assessments, and summarize registered ClinicalTrials.gov studies (`[NCT<8-digits>]`, trial phase, and status).
 ### 4. Translational Recommendation & Next Steps
-Write 2 crisp sentences naming the top lead and concrete experimental or clinical validation steps. Do NOT write a manual References section (auto-appended from your inline `[PMID]`/`[NCT]` citations). Never invent IDs or numbers.
+Write 2 concise sentences naming the primary lead and proposing a validation assay. Do NOT write a manual References section (auto-appended). Never invent IDs or numbers.

@@ -8,27 +8,27 @@ import { QUICK_EXAMPLES } from "@/lib/examples";
 
 const STATS: Array<[string, string, string?]> = [
   ["21,299", "Compounds"],
-  ["12,328", "L1000 Genes"],
-  ["591,697", "Level-5 Profiles"],
-  ["9,888", "IK-14 Scaffolds"],
-  ["31,082", "Genetic Perturbs"],
+  ["12,328", "Measured Genes"],
+  ["591,697", "Perturbation Profiles"],
+  ["9,888", "Unique Scaffolds"],
+  ["31,082", "Genetic Perturbations"],
   ["6", "Agent Skills", "/skills"],
 ];
 
 const HOW_STEPS = [
-  ["Select Skill & Plan", "Matches one of 6 scoped Skills and plans multi-step tool execution."],
-  ["Execute & Reflect", "Runs deterministic scoring, detects high T-DIKI hits, and auto re-screens safe drugs."],
-  ["Fetch Live Evidence", "Queries Europe PMC / PubMed & ClinicalTrials.gov with 7-day SQLite caching."],
-  ["Verify & Report", "Audits every PMID, NCT ID, and score before rendering your traceable dossier."],
+  ["1. Workflow Routing", "Matches your question to a specialized workflow for disease cohorts, targets, chemical structures, or drug comparisons."],
+  ["2. Scoring & Safety Filtering", "Ranks 21,299 compounds by disease-signature reversal and automatically filters out candidates with high predicted nephrotoxicity."],
+  ["3. Literature & Trial Retrieval", "Retrieves peer-reviewed studies from Europe PMC / PubMed and registered clinical studies from ClinicalTrials.gov."],
+  ["4. Citation & Data Verification", "Cross-checks every score, compound ID, PubMed ID, and clinical trial number against source records before generating the report."],
 ];
 
 const EXPLORE_TILES = [
-  ["/workbench", "Signature Workbench", "Multi-scale WTCS, XSum, Zhang & functional reversal with RenalConn weighting."],
-  ["/pathway-tf", "Pathway & TF Search", "Query precomputed PROGENy, CollecTRI & renal pathology activity."],
-  ["/target/?symbol=TGFBR1", "Target & Genetics", "Nephron compartment expression, targeting drugs & knockdown mimicry."],
-  ["/compound/?id=dexamethasone", "Compound Explorer", "2D structure, K-PRL signature, T-DIKI v2 attribution & scaffold siblings."],
-  ["/structure/?q=CC(%3DO)OC1%3DCC%3DCC%3DC1C(%3DO)O", "Structure Search", "2048-bit ECFP4 Tanimoto search & MoA inference from SMILES or ID."],
-  ["/cases", "Disease Cohorts", "10 QC-validated human kidney biopsy cohorts across DKD, LN, IgAN, CKD & AKI."],
+  ["/workbench", "Signature Workbench", "Rank 21,299 compounds by multi-scale signature reversal and renal safety weighting."],
+  ["/pathway-tf", "Pathway & TF Search", "Screen compounds modulating PROGENy signaling pathways, CollecTRI transcription factors, and renal pathology modules."],
+  ["/target/?symbol=TGFBR1", "Target & Genetics", "Explore single-cell nephron expression, direct targeting drugs, and genetic knockdown mimicry."],
+  ["/compound/?id=dexamethasone", "Compound Explorer", "Inspect 2D chemical structures, kidney perturbation profiles, nephrotoxicity risk attribution, and shared-scaffold analogs."],
+  ["/structure/?q=CC(%3DO)OC1%3DCC%3DCC%3DC1C(%3DO)O", "Structure Search", "Search 21,299 compounds by 2D structural similarity (ECFP4 Tanimoto) and infer mechanism of action."],
+  ["/cases", "Disease Cohorts", "Browse 10 curated human kidney biopsy transcriptomic cohorts across DKD, LN, IgAN, CKD, and AKI."],
 ];
 
 export default function Home() {
@@ -63,13 +63,12 @@ export default function Home() {
     }
   }, [focusTick]);
 
-
   const quickExamplesSection = (
     <section className="quick-examples" aria-label="Example Research Queries">
       <div className="quick-examples-head">
         <h2>Example Inputs</h2>
         <span className="small muted">
-          Click any example to fill the Run Research box — edit if needed, then click Run Research
+          Click any example to populate the search box — edit if needed, then click Run Research
         </span>
       </div>
       <div className="quick-example-grid">
@@ -82,7 +81,7 @@ export default function Home() {
               className={`quick-example-card ${isFilled ? "filled" : ""}`}
               style={{ "--ex-color": ex.color } as CSSProperties}
               onClick={() => fill(ex.prompt, ex.skillId)}
-              title="Click to insert into Run Research box"
+              title="Click to insert into the Run Research box"
             >
               <div className="quick-example-top">
                 <span className="badge" style={{ background: `${ex.color}18`, color: ex.color }}>
@@ -105,13 +104,13 @@ export default function Home() {
         <div>
           <div className="row" style={{ gap: 6, marginBottom: 6 }}>
             <span className="hero-kicker" style={{ marginBottom: 0 }}>
-              Skill-Guided ReAct · Europe PMC &amp; ClinicalTrials
+              Kidney Drug Repurposing · Nephrotoxicity Assessment · Literature Synthesis
             </span>
           </div>
 
           <h1>NephroAgent</h1>
           <div className="muted" style={{ fontSize: 13 }}>
-            Autonomous multi-step kidney drug-repurposing research agent: plans workflows, reflects on nephrotoxicity, searches PubMed &amp; trials, and verifies every claim.
+            Multi-step research assistant for kidney drug discovery — integrates transcriptomic reversal scoring, NephroSafe nephrotoxicity assessment, and live PubMed &amp; ClinicalTrials.gov evidence.
           </div>
 
           {/* Skill Selector Strip */}
@@ -140,7 +139,7 @@ export default function Home() {
           <div className="agent-box">
             <textarea
               ref={consoleRef}
-              placeholder="Ask a multi-step research question (e.g. Find reversal drugs for DKD glomeruli, rescue toxic hits, and verify literature) or click an example below..."
+              placeholder="Enter a kidney drug discovery question (e.g., identify reversal drugs for DKD glomeruli, evaluate tacrolimus nephrotoxicity, or compare two candidates)..."
               value={prompt}
               onChange={(e) => setPrompt(e.target.value)}
               onKeyDown={(e) => {
@@ -174,17 +173,17 @@ export default function Home() {
                   type="button"
                   className={agentMode === "auto" ? "active" : ""}
                   onClick={() => setAgentMode("auto")}
-                  title="Use DeepSeek ReAct planner + deterministic engine (auto-fallback if quota exceeded)"
+                  title="Multi-step AI reasoning with integrated literature review"
                 >
-                  DeepSeek ReAct
+                  AI Reasoning (ReAct)
                 </button>
                 <button
                   type="button"
                   className={agentMode === "fast" ? "active" : ""}
                   onClick={() => setAgentMode("fast")}
-                  title="Run deterministic multi-step pipeline without LLM calls"
+                  title="Instant rule-based pipeline without LLM calls"
                 >
-                  0-LLM Multi-Step
+                  Rule-Based Fast
                 </button>
               </div>
               <label className="small" style={{ margin: 0, display: "flex", alignItems: "center", gap: 4 }}>
@@ -223,7 +222,7 @@ export default function Home() {
         <section className="session-thread" aria-label="Research Session Thread">
           <div className="row" style={{ marginBottom: 8 }}>
             <h2 style={{ margin: 0, fontSize: 15 }}>Active Research Session ({turns.length} turn{turns.length > 1 ? "s" : ""})</h2>
-            <span className="small muted">Session memory tracks active cohorts, #1..#15 candidates, and verified PMIDs/NCTs</span>
+            <span className="small muted">Follow-up questions can reference ranked candidates (e.g., #1, #2) and active disease cohorts</span>
             <span className="spacer" />
             <button type="button" className="ghost mini" onClick={newSession}>
               Reset Session
@@ -244,7 +243,7 @@ export default function Home() {
           <div className="followup-bar">
             <input
               type="text"
-              placeholder="Ask a follow-up in this session (e.g. Compare #1 and #2, or Check trials for #3)..."
+              placeholder="Ask a follow-up question in this session (e.g., Compare #1 and #2, or Check clinical trials for #3)..."
               value={followUp}
               onChange={(e) => setFollowUp(e.target.value)}
               onKeyDown={(e) => {
@@ -276,7 +275,7 @@ export default function Home() {
       <div className="grid cols-6" style={{ marginBottom: 12, marginTop: 14 }}>
         {STATS.map(([v, l, href]) =>
           href ? (
-            <Link key={l} href={href} prefetch={false} className="card kpi-card kpi-link" title="View all 6 Agent Skills and step-by-step workflows">
+            <Link key={l} href={href} prefetch={false} className="card kpi-card kpi-link" title="Explore all 6 Agent Skills and step-by-step workflows">
               <div className="stat">{v}</div>
               <div className="stat-label">
                 {l} <span className="kpi-arrow">→</span>
@@ -296,7 +295,7 @@ export default function Home() {
           <div className="how-step" key={title}>
             <div className="how-num">{idx + 1}</div>
             <div>
-              <div style={{ fontWeight: 700, fontSize: 12.5 }}>{title}</div>
+              <div style={{ fontWeight: 700, fontSize: 12.5 }}>{title.replace(/^\d+\.\s*/, "")}</div>
               <div className="small muted">{desc}</div>
             </div>
           </div>

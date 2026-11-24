@@ -52,7 +52,7 @@ export default function AgentDrawer() {
     >
       <div className="row" style={{ gap: 8, marginBottom: open ? 6 : 0 }}>
         <span className="hero-kicker" style={{ marginBottom: 0 }}>
-          Skill-Guided ReAct · Europe PMC &amp; ClinicalTrials
+          Kidney Drug Repurposing · Nephrotoxicity Assessment · Literature Synthesis
         </span>
         <strong style={{ fontSize: 15, color: "var(--ink)" }}>NephroAgent</strong>
         {turns.length > 0 && (
@@ -102,7 +102,7 @@ export default function AgentDrawer() {
           <div className="agent-box">
             <textarea
               ref={boxRef}
-              placeholder="Ask a multi-step research question (e.g. Find reversal drugs for DKD glomeruli, rescue toxic hits, and verify literature) or click Ask Agent on any item below..."
+              placeholder="Enter a kidney drug discovery question or click Ask Agent on any item below..."
               value={prompt}
               onChange={(e) => setPrompt(e.target.value)}
               onKeyDown={(e) => {
@@ -138,7 +138,7 @@ export default function AgentDrawer() {
                   onClick={() => setAgentMode("auto")}
                   title="Use DeepSeek ReAct planner + deterministic engine (auto-fallback if quota exceeded)"
                 >
-                  DeepSeek ReAct
+                  AI Reasoning (ReAct)
                 </button>
                 <button
                   type="button"
@@ -146,7 +146,7 @@ export default function AgentDrawer() {
                   onClick={() => setAgentMode("fast")}
                   title="Run deterministic multi-step pipeline without LLM calls"
                 >
-                  0-LLM Multi-Step
+                  Rule-Based Fast
                 </button>
               </div>
               <label className="small" style={{ margin: 0, display: "flex", alignItems: "center", gap: 4 }}>

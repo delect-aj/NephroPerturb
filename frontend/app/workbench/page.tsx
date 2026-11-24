@@ -179,12 +179,12 @@ export default function Workbench() {
         </div>
 
         <div className="card">
-          <h2>Parameters &amp; 4D Weights</h2>
+          <h2>Scoring Parameters &amp; Weights</h2>
           <div className="grid cols-2">
             <div>
               <label>Perturbation context</label>
               <select value={context} onChange={(e) => setContext(e.target.value)}>
-                <option value="kprl">K-PRL (kidney-shrunk, general)</option>
+                <option value="kprl">K-PRL (Kidney Consensus Signature)</option>
                 <option value="pan">Pan-cell consensus (systemic)</option>
                 <option value="renal_epi">HA1E renal epithelium (tubular/fibrosis)</option>
                 <option value="renal_endo">Endothelium (glomerular/vascular)</option>
@@ -195,8 +195,8 @@ export default function Workbench() {
               <label>Gene tier</label>
               <select value={tier} onChange={(e) => setTier(e.target.value)}>
                 <option value="all">All 12,328 genes</option>
-                <option value="bing">BING high confidence</option>
-                <option value="lm">Landmark 978 only</option>
+                <option value="bing">Best Inferred Genes (BING, 10,174)</option>
+                <option value="lm">Landmark Genes Only (978)</option>
               </select>
             </div>
             <div>
@@ -210,7 +210,7 @@ export default function Workbench() {
               </select>
             </div>
             <div>
-              <label>Max T-DIKI tier</label>
+              <label>Max Nephrotoxicity Risk (T-DIKI)</label>
               <select value={maxDiki} onChange={(e) => setMaxDiki(e.target.value)}>
                 <option value="">No limit</option>
                 <option value="Moderate">Up to Moderate</option>
@@ -329,7 +329,7 @@ export default function Workbench() {
       {selected && radarItems.length > 0 && (
         <div className="grid cols-2" style={{ marginTop: 12 }}>
           <div className="card">
-            <h2>Component τ Profile · {selected.pert_iname || selected.pert_id}</h2>
+            <h2>Reversal Score Components (τ) · {selected.pert_iname || selected.pert_id}</h2>
             <RadarChart items={radarItems} height={260} />
           </div>
           <div className="card">

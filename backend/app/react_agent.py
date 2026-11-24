@@ -855,13 +855,12 @@ def _append_literature_section(lines: list[str], lits: list[dict], trials: list[
                 for pt in eff_pts[:2]
             )
             eff_paragraphs.append(
-                f"For **{ent}** (`{tier}` evidence; {eff_hits} kidney efficacy hits via {lit.get('provider')}), "
-                f"prior studies report: {findings_txt}"
+                f"For **{ent}** ({tier} evidence tier; {eff_hits} kidney efficacy publications indexed via {lit.get('provider')}), "
+                f"published studies indicate: {findings_txt}"
             )
         else:
             eff_paragraphs.append(
-                f"**{ent}** has 0 indexed kidney efficacy publications (`Novel (0 renal papers)`), "
-                f"positioning it as an untested repurposing hypothesis in renal pathology."
+                f"No prior kidney efficacy publications were indexed for **{ent}**, indicating an unexplored repurposing candidate in renal disease."
             )
 
         tinfo = trials_by_name.get(ent.lower())
@@ -890,7 +889,7 @@ def _append_literature_section(lines: list[str], lits: list[dict], trials: list[
             )
         else:
             safe_paragraphs.append(
-                f"No direct nephrotoxicity warning abstracts were extracted for **{ent}** (safety hits={safe_hits}).{trial_clause}"
+                f"No specific nephrotoxicity warning abstracts were retrieved for **{ent}** ({safe_hits} renal safety hits indexed).{trial_clause}"
             )
 
     for tr_blk in trials:
@@ -1042,7 +1041,7 @@ def _build_deterministic_synthesis(
     lines.append(sec_titles[0])
     summary_intro = " · ".join(f"{f['label']}: {f['value']}" for f in facts[:4]) if facts else ""
     ref_clause = (" " + " ".join(reflections)) if reflections else ""
-    lines.append(f"Deterministic screening completed ({summary_intro}).{ref_clause}".strip())
+    lines.append(f"Transcriptomic screening summary: {summary_intro}.{ref_clause}".strip())
     if rows:
         score_lbl = (
             "RTPS" if rows[0].get("rtps") is not None
@@ -1070,9 +1069,9 @@ def _build_deterministic_synthesis(
         mods = ", ".join(f"{k} ({v})" for k, v in list((prof.get("top_renal_modules") or {}).items())[:3]) or "none"
         tgs = ", ".join((prof.get("targets") or [])[:5]) or "unannotated"
         lines.append(
-            f"The top profiled candidate **{prof.get('pert_iname')}** (`{prof.get('pert_id')}`) acts via `{prof.get('moa') or 'unannotated MoA'}` "
-            f"(targets: {tgs}) with a NephroSafe T-DIKI tier of **{prof.get('tdiki_tier', 'NA')}** (p={_fmt_num(prof.get('tdiki_prob'), 3)}). "
-            f"In K-PRL kidney context, its strongest PROGENy pathway shifts are {pws}, alongside renal module activities in {mods}."
+            f"The leading candidate **{prof.get('pert_iname')}** (`{prof.get('pert_id')}`) acts as a {prof.get('moa') or 'compound with unannotated mechanism'} "
+            f"(molecular targets: {tgs}) and carries a predicted T-DIKI nephrotoxicity risk tier of **{prof.get('tdiki_tier', 'NA')}** (probability {_fmt_num(prof.get('tdiki_prob'), 3)}). "
+            f"Within the kidney-context perturbation signature (K-PRL), its primary PROGENy signaling shifts include {pws}, with key renal pathology module effects across {mods}."
         )
     else:
         lines.append("Review the ranked candidates table and supporting evidence tabs below for detailed pathway and K-PRL metrics.")

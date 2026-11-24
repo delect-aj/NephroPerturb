@@ -91,7 +91,7 @@ export default function CompoundView({ id, onSelectCompound }: { id: string; onS
           <div className="kv" style={{ marginTop: 12 }}>
             <div>InChIKey</div>
             <div className="mono small">{c.inchikey || "—"}</div>
-            <div>Scaffold (IK-14)</div>
+            <div>Core Scaffold (InChIKey-14)</div>
             <div className="mono small">{c.inchikey14 || "—"}</div>
             <div>MW / LogP</div>
             <div>
@@ -105,7 +105,7 @@ export default function CompoundView({ id, onSelectCompound }: { id: string; onS
             <div>{c.lipinski_violations ?? "—"}</div>
             <div>PAINS alerts</div>
             <div>{c.pains_alerts ?? "—"}</div>
-            <div>K-PRL λ</div>
+            <div>Kidney Shrinkage Weight (λ)</div>
             <div>{c.kprl_lambda != null ? Number(c.kprl_lambda).toFixed(3) : "—"}</div>
             <div>Signatures merged</div>
             <div>{c.n_sigs ?? "—"}</div>
@@ -115,21 +115,21 @@ export default function CompoundView({ id, onSelectCompound }: { id: string; onS
         <div className="card">
           <h2>Kidney safety & mechanism</h2>
           <div className="kv">
-            <div>T-DIKI v2 gated risk</div>
+            <div>Predicted Risk Probability (T-DIKI v2)</div>
             <div>{Number(data.tdiki?.prob || 0).toFixed(3)}</div>
-            <div>Structure expert</div>
+            <div>Chemical Structure Risk Score</div>
             <div>{data.tdiki?.struct != null ? Number(data.tdiki.struct).toFixed(3) : "—"}</div>
-            <div>HA1E epithelial tox</div>
+            <div>Renal Epithelial Transcriptomic Risk</div>
             <div>
               {data.tdiki?.tx != null
                 ? Number(data.tdiki.tx).toFixed(3)
                 : "Not measured (structure only)"}
             </div>
-            <div>T-DIKI tier</div>
+            <div>Predicted Risk Tier</div>
             <div>
               <DikiBadge tier={data.tdiki?.tier} />
             </div>
-            <div>DIRIL gold standard</div>
+            <div>FDA Reference Classification (DIRIL)</div>
             <div>
               <DirilBadge value={data.tdiki?.diril_label} />
             </div>
@@ -157,7 +157,7 @@ export default function CompoundView({ id, onSelectCompound }: { id: string; onS
               </table>
             </>
           ) : null}
-          <h2 style={{ marginTop: 16 }}>Scaffold siblings (same InChIKey-14)</h2>
+          <h2 style={{ marginTop: 16 }}>Structurally Related Analogs (Shared Core Scaffold)</h2>
           <div className="chip-row">
             {(data.scaffold_siblings || []).slice(0, 12).map((p: string) =>
               onSelectCompound ? (

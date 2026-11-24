@@ -10,11 +10,11 @@ import {
 
 function stageBadgeClass(tag?: string): string {
   switch (tag) {
-    case "Auto-Reflect":
+    case "Safety Filtering":
       return "stage-tag stage-reflect";
-    case "Evidence":
+    case "Literature & Trials":
       return "stage-tag stage-evidence";
-    case "Verify & Write":
+    case "Synthesis & Verification":
       return "stage-tag stage-verify";
     default:
       return "stage-tag stage-compute";
@@ -32,11 +32,11 @@ export default function SkillsPage() {
         <div className="skills-hero-top">
           <div>
             <span className="hero-kicker" style={{ marginBottom: 6 }}>
-              NephroAgent Architecture · 6 Modular ReAct Skills
+              NephroAgent Architecture · 6 Specialized Research Workflows
             </span>
             <h1 className="skills-hero-title">Agent Skills Guide</h1>
             <p className="skills-hero-sub">
-              Every query is routed deterministically to one focused Skill with scoped tools, automatic nephrotoxicity reflection, and a verified 4-section synthesis report.
+              Each research workflow follows a structured protocol combining transcriptomic scoring, nephrotoxicity assessment, and live literature verification.
             </p>
           </div>
           <Link href="/" prefetch={false} style={{ flexShrink: 0 }}>
@@ -51,7 +51,7 @@ export default function SkillsPage() {
       <div className="row" style={{ marginBottom: 9 }}>
         <h2 style={{ margin: 0, fontSize: 15 }}>Step-by-Step Workflows</h2>
         <span className="small muted">
-          Click &quot;Try Example ↗&quot; to open that Skill and prompt in the Agent Console
+          Click &quot;Try Example ↗&quot; to load that workflow and example query into the Agent Console
         </span>
       </div>
 
@@ -73,20 +73,20 @@ export default function SkillsPage() {
                   Skill {idx + 1} · {sk.shortLabel}
                 </span>
                 <span className="badge grey mono">{sk.id}</span>
-                <span className="badge grey">Max {sk.maxSteps} steps</span>
+                <span className="badge grey">Up to {sk.maxSteps} steps</span>
                 <span className="spacer" />
                 <button
                   type="button"
                   className="ghost mini"
                   onClick={() => { fill(sk.examplePrompt, sk.id); router.push("/"); }}
-                  title="Open Agent Console prefilled with this Skill's example"
+                  title="Open Agent Console prefilled with this example query"
                 >
                   Try Example ↗
                 </button>
               </div>
               <h3 className="skill-doc-title">{sk.name}</h3>
               <div className="skill-when-line">
-                <strong>Best for:</strong> {sk.whenUsed}
+                <strong>Use case:</strong> {sk.whenUsed}
               </div>
             </div>
 
@@ -126,7 +126,7 @@ export default function SkillsPage() {
 
             {/* Structured Report Blueprint + Allowed Tools */}
             <div className="skill-doc-foot">
-              <div className="skill-foot-label">Fixed 4-Section Report Blueprint</div>
+              <div className="skill-foot-label">Report Structure (4 Sections)</div>
               <div className="skill-section-pills">
                 {sk.outputSections.map((sec) => (
                   <span key={sec} className="section-pill">
@@ -136,7 +136,7 @@ export default function SkillsPage() {
               </div>
               <div className="skill-tools-summary">
                 <span className="skill-foot-label" style={{ marginBottom: 0 }}>
-                  Tool Allowlist ({sk.allowedTools.length}):
+                  Workflow Tools ({sk.allowedTools.length}):
                 </span>{" "}
                 <span className="mono muted">{sk.allowedTools.join(" · ")}</span>
               </div>
@@ -148,8 +148,8 @@ export default function SkillsPage() {
       {/* Shared Execution & Verification Safeguards */}
       <section className="card" style={{ marginTop: 14 }}>
         <div className="row" style={{ marginBottom: 8 }}>
-          <h2 style={{ margin: 0 }}>Shared Safeguards Across All 6 Skills</h2>
-          <span className="small muted">Enforced identically in DeepSeek ReAct and 0-LLM Multi-Step modes</span>
+          <h2 style={{ margin: 0 }}>Quality &amp; Verification Standards</h2>
+          <span className="small muted">Applied consistently across AI Reasoning and Rule-Based Fast modes</span>
         </div>
         <div className="grid cols-4">
           {SHARED_SAFEGUARDS.map((g) => (

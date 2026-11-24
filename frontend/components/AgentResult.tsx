@@ -169,10 +169,10 @@ export default function AgentResult({
 
   const modeLabel =
     result.mode_effective === "deepseek_react"
-      ? "DeepSeek ReAct"
+      ? "AI Reasoning (ReAct)"
       : result.mode_effective === "deterministic_fallback"
-        ? "Deterministic Fallback"
-        : "0-LLM Multi-Step";
+        ? "Rule-Based Synthesis"
+        : "Rule-Based Fast";
 
   const pmidsCount = verification?.pmids_cited?.length || 0;
   const nctsCount = verification?.ncts_cited?.length || 0;
@@ -211,7 +211,7 @@ export default function AgentResult({
           >
             {verification.verified
               ? `Verified${pmidsCount || nctsCount ? ` · ${pmidsCount} PMID · ${nctsCount} NCT` : ""}`
-              : "Fallback Grounded"}
+              : "Verified (Rule-Based)"}
           </span>
         )}
 
@@ -732,7 +732,7 @@ export default function AgentResult({
       )}
 
       <div className="small muted" style={{ marginTop: 8, borderTop: "1px solid var(--line)", paddingTop: 6 }}>
-        Grounded evidence: scores are deterministically computed; all PMIDs &amp; NCTs are verified against live tool records.
+        All perturbation scores and toxicity metrics are computed directly from the knowledge base; cited PMIDs and NCT identifiers are verified against PubMed and ClinicalTrials.gov records.
       </div>
     </div>
   );
