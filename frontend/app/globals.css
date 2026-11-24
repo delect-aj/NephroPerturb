@@ -772,60 +772,159 @@ a.kpi-link:hover .kpi-arrow {
 }
 
 /* Skills Logic Catalog Page */
+.skills-hero {
+  background: linear-gradient(135deg, #ffffff 0%, #eff6ff 55%, #f0fdfa 100%);
+  border: 1px solid #dbeafe;
+  border-radius: 14px;
+  padding: 16px 18px;
+  box-shadow: var(--shadow-md);
+  margin-bottom: 14px;
+}
+.skills-hero-top {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 14px;
+  flex-wrap: wrap;
+}
+.skills-hero-title {
+  font-size: 22px;
+  font-weight: 800;
+  letter-spacing: -0.35px;
+  margin: 0 0 4px;
+  color: var(--ink);
+}
+.skills-hero-sub {
+  margin: 0;
+  font-size: 13px;
+  color: var(--muted);
+  max-width: 780px;
+  line-height: 1.5;
+}
+.skills-filter-strip {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 12px;
+  padding-top: 10px;
+  border-top: 1px solid #dbeafe;
+}
+.skill-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  display: inline-block;
+  flex-shrink: 0;
+}
+
+/* Auto-routing 4-step horizontal decision flow */
+.route-flow-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 8px;
+  align-items: stretch;
+}
+@media (max-width: 1120px) {
+  .route-flow-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .route-flow-arrow { display: none !important; }
+}
+@media (max-width: 640px) {
+  .route-flow-grid { grid-template-columns: 1fr; }
+}
+.route-flow-item {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
 .route-step-card {
+  flex: 1;
+  height: 100%;
   background: var(--panel-soft);
   border: 1px solid var(--line);
-  border-radius: 9px;
+  border-radius: 10px;
   padding: 10px 12px;
+  display: flex;
+  flex-direction: column;
 }
+.route-flow-arrow {
+  color: #94a3b8;
+  font-weight: 700;
+  font-size: 14px;
+  flex-shrink: 0;
+}
+.route-target-pill {
+  margin-top: auto;
+  display: inline-flex;
+  align-self: flex-start;
+  font-size: 11px;
+  font-weight: 600;
+  padding: 2px 8px;
+  border-radius: 999px;
+  border: 1px solid transparent;
+}
+
+/* 6-Skill Catalog Cards */
 .skills-catalog-grid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 12px;
+  gap: 14px;
 }
-@media (max-width: 980px) {
+.skills-catalog-grid.single {
+  grid-template-columns: minmax(0, 860px);
+}
+@media (max-width: 1020px) {
   .skills-catalog-grid {
     grid-template-columns: 1fr;
   }
 }
 .skill-doc-card {
-  border-top: 3px solid var(--skill-color, var(--accent));
+  padding: 0;
+  overflow: hidden;
+  border-top: 3.5px solid var(--skill-color, var(--accent));
   display: flex;
   flex-direction: column;
-  gap: 8px;
+}
+.skill-doc-header {
+  padding: 13px 15px 11px;
+  background: linear-gradient(180deg, #f8fafc 0%, #ffffff 100%);
+  border-bottom: 1px solid var(--line);
 }
 .skill-doc-title {
-  margin: 0;
+  margin: 0 0 5px;
   font-size: 15.5px;
-  font-weight: 700;
+  font-weight: 750;
   color: var(--ink);
+  letter-spacing: -0.2px;
 }
-.skill-when-box {
+.skill-when-line {
   font-size: 12.2px;
-  color: #334155;
-  background: var(--panel-soft);
-  border: 1px solid var(--line);
-  border-radius: 7px;
-  padding: 6px 9px;
+  color: #475569;
+  line-height: 1.45;
+  padding-left: 8px;
+  border-left: 2.5px solid var(--skill-color, var(--accent));
 }
-.skill-steps-list {
+
+/* Connected Vertical Step Timeline */
+.skill-timeline {
+  padding: 12px 15px 8px;
   display: flex;
   flex-direction: column;
-  gap: 8px;
-  margin: 2px 0;
 }
-.skill-step-row {
+.skill-tl-row {
   display: flex;
-  align-items: flex-start;
-  gap: 9px;
-  padding: 7px 9px;
-  border-radius: 8px;
-  background: #ffffff;
-  border: 1px solid #e2e8f0;
+  align-items: stretch;
+  gap: 10px;
+}
+.skill-tl-rail {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  width: 22px;
+  flex-shrink: 0;
 }
 .skill-step-num {
-  width: 20px;
-  height: 20px;
+  width: 21px;
+  height: 21px;
   border-radius: 50%;
   color: #ffffff;
   font-size: 11px;
@@ -834,28 +933,107 @@ a.kpi-link:hover .kpi-arrow {
   align-items: center;
   justify-content: center;
   flex-shrink: 0;
-  margin-top: 1px;
+  box-shadow: 0 1px 3px rgba(15, 23, 42, 0.14);
 }
-.skill-step-body {
+.skill-tl-line {
+  width: 2px;
+  flex: 1;
+  min-height: 14px;
+  margin: 3px 0;
+  border-radius: 2px;
+}
+.skill-tl-content {
   flex: 1;
   min-width: 0;
+  padding-bottom: 11px;
+}
+.skill-tl-row:last-child .skill-tl-content {
+  padding-bottom: 4px;
 }
 .skill-step-head {
   display: flex;
   align-items: center;
   flex-wrap: wrap;
   gap: 6px;
-  margin-bottom: 2px;
-  font-size: 12.8px;
+  margin-bottom: 3px;
+  font-size: 12.9px;
+  color: var(--ink);
+}
+.skill-step-desc {
+  font-size: 12.1px;
+  color: #475569;
+  line-height: 1.45;
 }
 .skill-step-tools {
-  display: inline-flex;
+  display: flex;
   flex-wrap: wrap;
   gap: 4px;
+  margin-top: 5px;
 }
+.tool-chip {
+  font-family: ui-monospace, Menlo, Consolas, monospace;
+  font-size: 10.8px;
+  padding: 1.5px 6px;
+  border-radius: 5px;
+  background: #f1f5f9;
+  border: 1px solid #e2e8f0;
+  color: #1e3a8a;
+}
+.stage-tag {
+  font-size: 10.3px;
+  font-weight: 600;
+  padding: 1px 7px;
+  border-radius: 999px;
+}
+.stage-compute { background: #eff6ff; color: #1d4ed8; }
+.stage-reflect { background: #fef3c7; color: #b45309; }
+.stage-evidence { background: #e0f2fe; color: #0369a1; }
+.stage-verify { background: #dcfce7; color: #15803d; }
+
+/* Card Footer Blueprint */
 .skill-doc-foot {
   margin-top: auto;
-  padding-top: 8px;
+  padding: 10px 15px 12px;
+  background: var(--panel-soft);
   border-top: 1px solid var(--line);
+}
+.skill-foot-label {
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.35px;
+  color: #64748b;
+  margin-bottom: 5px;
+}
+.skill-section-pills {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+  margin-bottom: 8px;
+}
+.section-pill {
+  font-size: 11.1px;
+  color: #334155;
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 6px;
+  padding: 2px 7px;
+}
+.skill-tools-summary {
+  font-size: 11.2px;
   line-height: 1.45;
+}
+
+/* Shared Safeguards */
+.safeguard-tile {
+  background: var(--panel-soft);
+  border: 1px solid var(--line);
+  border-radius: 9px;
+  padding: 10px 12px;
+}
+.safeguard-title {
+  font-size: 12.8px;
+  font-weight: 700;
+  color: var(--ink);
+  margin-bottom: 3px;
 }

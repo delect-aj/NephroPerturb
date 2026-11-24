@@ -2,6 +2,7 @@ export interface SkillStepDoc {
   step: number;
   title: string;
   tools: string[];
+  stageTag?: "Compute" | "Auto-Reflect" | "Evidence" | "Verify & Write";
   logic: string;
 }
 
@@ -21,23 +22,50 @@ export interface SkillLogicDoc {
 export const AUTO_ROUTING_RULES = [
   {
     priority: "1",
-    title: "Manual Skill Selection",
+    title: "Manual Override",
+    target: "Selected Skill",
+    color: "#475569",
     rule: "If you click a specific Skill pill in the console, Auto routing is skipped and that Skill runs directly.",
   },
   {
     priority: "2",
-    title: "Compare & Safety Rescue",
-    rule: "Keywords like compare/vs trigger Compare Drugs; nephrotoxic/safer analogs/T-DIKI/DIRIL trigger Safety & Rescue.",
+    title: "Compare or Safety Rescue",
+    target: "Compare Drugs / Safety & Rescue",
+    color: "#dc2626",
+    rule: "Compare/vs triggers Compare Drugs; safety/analog rescue terms trigger Safety & Rescue unless a cohort, signature, pathway, target, or SMILES screen is also requested.",
   },
   {
     priority: "3",
-    title: "Literature & Session Follow-ups",
-    rule: "Pure PubMed/clinical trial queries (or follow-ups referencing #1, #2, or prior candidates) route to Literature & Trials.",
+    title: "Pure Literature / Follow-up",
+    target: "Literature & Trials",
+    color: "#0284c7",
+    rule: "PubMed or clinical-trial queries without computational screen terms (or session follow-ups referencing #1, #2, or prior candidates) route to Literature & Trials.",
   },
   {
     priority: "4",
-    title: "Deterministic SOP-1 to SOP-6 & Guardrail",
-    rule: "Remaining queries match Up/Down genes, cohorts (DKD/LN/IgAN/AKI), pathways, target knockdowns, or SMILES scaffolds; non-kidney topics are stopped safely.",
+    title: "SOP-1..6 & Scope Guardrail",
+    target: "Disease / Target / Structure / Safety",
+    color: "#2563eb",
+    rule: "Matches Up/Down signatures, 10 kidney cohorts, pathways/TFs, knockdown targets, SMILES scaffolds, or compound profiles; non-kidney prompts stop cleanly.",
+  },
+];
+
+export const SHARED_SAFEGUARDS = [
+  {
+    title: "Scoped Determinism",
+    detail: "DeepSeek ReAct runs at temperature=0.0, seed=42, restricted strictly to each Skill's allowed tools and step cap.",
+  },
+  {
+    title: "7-Day Evidence Cache",
+    detail: "Title/Abstract Europe PMC (PubMed fallback) and ClinicalTrials.gov v2 queries are cached for 7 days in SQLite.",
+  },
+  {
+    title: "Grounding Verifier",
+    detail: "Audits every PMID, NCT, BRD ID, and score against live tool outputs with 1x surgical repair or deterministic fallback.",
+  },
+  {
+    title: "Auto-Built References",
+    detail: "Numbered bibliography entries and table footnotes are assembled directly from verified tool metadata with zero extra tokens.",
   },
 ];
 
@@ -48,7 +76,7 @@ export const SKILLS_CATALOG: SkillLogicDoc[] = [
     name: "Disease-to-Evidence Repurposing",
     color: "#2563eb",
     maxSteps: 6,
-    whenUsed: "Kidney cohorts (DKD, LN, IgAN, AKI), Up/Down gene signatures, or Pathway/TF screens.",
+    whenUsed: "10 kidney cohorts (DKD, LN, IgAN, CKD, AKI), Up/Down gene signatures, or Pathway/TF modulation screens.",
     allowedTools: [
       "run_cohort_case",
       "score_gene_signature",
@@ -61,27 +89,31 @@ export const SKILLS_CATALOG: SkillLogicDoc[] = [
     workflow: [
       {
         step: 1,
-        title: "Screen Drug Candidates",
+        title: "Screen Candidates",
         tools: ["run_cohort_case", "score_gene_signature", "query_pathway_tf"],
-        logic: "Ranks 21,299 compounds by transcriptional disease-reversal and inspects Top-3 hits for High T-DIKI or FDA DIRIL+ toxicity flags.",
+        stageTag: "Compute",
+        logic: "Ranks 21,299 compounds for kidney disease reversal and checks Top-3 hits for High T-DIKI or FDA DIRIL+ risk.",
       },
       {
         step: 2,
         title: "Auto-Rescue Toxic Top Hits",
-        tools: ["re-screen (Low T-DIKI)", "find_safe_analogs"],
-        logic: "Runs automatically only if a Top-3 lead is flagged toxic, switching to approved Low T-DIKI drugs or safer structural analogs.",
+        tools: ["find_safe_analogs"],
+        stageTag: "Auto-Reflect",
+        logic: "Triggered automatically if any Top-3 hit is High T-DIKI or DIRIL+: re-screens approved Low T-DIKI drugs or safer structural analogs.",
       },
       {
         step: 3,
         title: "Deep-Profile #1 Safe Lead",
         tools: ["profile_compound"],
-        logic: "Fetches the #1 safe compound by exact pert_id to examine its targets, MoA, PROGENy pathways, 9 renal modules, and K-PRL genes.",
+        stageTag: "Compute",
+        logic: "Profiles the #1 safe lead by exact pert_id (BRD-...) for targets, MoA, PROGENy pathways, 9 renal modules, and K-PRL genes.",
       },
       {
         step: 4,
-        title: "Verify Literature & Trials",
+        title: "Audit Literature & Trials",
         tools: ["search_literature", "search_clinical_trials"],
-        logic: "Queries Europe PMC / PubMed (Title/Abstract for both efficacy and nephrotoxicity) plus ClinicalTrials.gov for the Top 1-2 leads, then writes the verified report.",
+        stageTag: "Evidence",
+        logic: "Batches Title/Abstract Europe PMC/PubMed (efficacy + safety) and ClinicalTrials.gov on the Top 1-2 leads, then writes the verified 4-section report.",
       },
     ],
     outputSections: [
@@ -99,7 +131,7 @@ export const SKILLS_CATALOG: SkillLogicDoc[] = [
     name: "Compound Safety & Toxicity Rescue",
     color: "#dc2626",
     maxSteps: 5,
-    whenUsed: "Checking a compound safety profile, T-DIKI risk drivers, or safer Low-DIKI structural analogs.",
+    whenUsed: "Auditing a drug's kidney safety, inspecting T-DIKI attribution drivers, or rescuing toxic drugs with safer analogs.",
     allowedTools: [
       "profile_compound",
       "explain_tdiki",
@@ -110,27 +142,31 @@ export const SKILLS_CATALOG: SkillLogicDoc[] = [
     workflow: [
       {
         step: 1,
-        title: "Audit Risk & Attribution Drivers",
+        title: "Audit Risk & Attribution",
         tools: ["profile_compound", "explain_tdiki"],
-        logic: "Computes NephroSafe T-DIKI v2 tier/probability, FDA DIRIL label, and the structural and transcriptomic features driving toxicity.",
+        stageTag: "Compute",
+        logic: "Computes T-DIKI v2 tier/probability, FDA DIRIL status, and the structural and transcriptomic drivers behind kidney toxicity.",
       },
       {
         step: 2,
         title: "Scan Safer ECFP4 Analogs",
         tools: ["find_safe_analogs"],
-        logic: "Triggered when risk is Moderate/High, DIRIL+, or alternatives are requested; inspects the top 120 ECFP4 neighbors to keep distinct Low T-DIKI analogs.",
+        stageTag: "Auto-Reflect",
+        logic: "If risk is Moderate/High, DIRIL+, or alternatives are requested, scans top 120 ECFP4 neighbors and retains distinct Low T-DIKI analogs.",
       },
       {
         step: 3,
-        title: "Check Toxicity Literature & Trials",
+        title: "Review Toxicity Literature & Trials",
         tools: ["search_literature", "search_clinical_trials"],
-        logic: "Collects published nephrotoxicity mechanisms alongside kidney clinical trial records for the queried drug.",
+        stageTag: "Evidence",
+        logic: "Collects published nephrotoxicity mechanisms alongside registered kidney clinical trials for the queried compound.",
       },
       {
         step: 4,
-        title: "Build Risk & Substitution Plan",
-        tools: ["grounded synthesis"],
-        logic: "Synthesizes attribution drivers, analog count/availability, and literature into actionable risk mitigation or scaffold replacement advice.",
+        title: "Synthesize Risk Mitigation",
+        tools: [],
+        stageTag: "Verify & Write",
+        logic: "Audits all IDs and scores, then outputs a 4-section safety verdict advising on monitoring, analog rescue, or scaffold switch.",
       },
     ],
     outputSections: [
@@ -140,7 +176,7 @@ export const SKILLS_CATALOG: SkillLogicDoc[] = [
       "4. Translational Recommendation & Next Steps",
     ],
     examplePrompt:
-      "Is tacrolimus nephrotoxic? Explain T-DIKI drivers, audit safety literature, and find safer Low-DIKI structural analogs",
+      "Is tacrolimus nephrotoxic? Explain its T-DIKI drivers, check nephrotoxicity literature, and find safer Low T-DIKI analogs",
   },
   {
     id: "target-to-lead",
@@ -148,7 +184,7 @@ export const SKILLS_CATALOG: SkillLogicDoc[] = [
     name: "Target-to-Lead & Genetic Mimicry",
     color: "#d97706",
     maxSteps: 5,
-    whenUsed: "Target gene biology, single-cell nephron localization, and shRNA/CRISPR knockdown-mimicking drugs.",
+    whenUsed: "Evaluating a kidney target gene, single-cell nephron expression, and shRNA/CRISPR knockdown-mimicking drugs.",
     allowedTools: [
       "profile_target",
       "profile_compound",
@@ -158,27 +194,31 @@ export const SKILLS_CATALOG: SkillLogicDoc[] = [
     workflow: [
       {
         step: 1,
-        title: "Map Nephron Expression & Mimics",
+        title: "Map Nephron Biology & Mimics",
         tools: ["profile_target"],
-        logic: "Retrieves target expression across kidney compartments, direct drugs, and compounds whose signatures mimic genetic knockdown.",
+        stageTag: "Compute",
+        logic: "Retrieves nephron compartment expression, direct targeting drugs, and compounds whose signatures mimic genetic knockdown.",
       },
       {
         step: 2,
-        title: "Safety Check Top Mimic Lead",
+        title: "Check #1 Mimic Lead Safety",
         tools: ["profile_compound"],
-        logic: "Profiles the #1 named mimicking compound by exact pert_id to check MoA, renal pathways, and T-DIKI / DIRIL kidney safety.",
+        stageTag: "Compute",
+        logic: "Profiles the #1 named knockdown-mimicking compound by exact pert_id to verify MoA, pathways, and T-DIKI/DIRIL safety.",
       },
       {
         step: 3,
-        title: "Query Target & Lead Evidence",
+        title: "Audit Target & Lead Evidence",
         tools: ["search_literature", "search_clinical_trials"],
-        logic: "Searches Title/Abstract PubMed papers for both the target gene and the #1 lead compound, plus any registered kidney trials.",
+        stageTag: "Evidence",
+        logic: "Searches Title/Abstract PubMed for both the target gene and the #1 lead compound, plus kidney clinical trials for the lead.",
       },
       {
         step: 4,
-        title: "Prioritize Validation Strategy",
-        tools: ["grounded synthesis"],
-        logic: "Combines target biology, knockdown mimicry, safety audit, and literature into a focused validation recommendation.",
+        title: "Prioritize Validation Assay",
+        tools: [],
+        stageTag: "Verify & Write",
+        logic: "Verifies every score and citation, then recommends the top validation lead and next experimental assay.",
       },
     ],
     outputSections: [
@@ -196,7 +236,7 @@ export const SKILLS_CATALOG: SkillLogicDoc[] = [
     name: "Structure Similarity & MoA Validation",
     color: "#4f46e5",
     maxSteps: 4,
-    whenUsed: "Querying a SMILES string, chemical structure similarity, or a BRD-... compound ID.",
+    whenUsed: "Submitting a SMILES string, chemical similarity query, or BRD-... scaffold ID to infer MoA and safety.",
     allowedTools: [
       "find_safe_analogs",
       "profile_compound",
@@ -205,27 +245,31 @@ export const SKILLS_CATALOG: SkillLogicDoc[] = [
     workflow: [
       {
         step: 1,
-        title: "Scan 2D Chemical Neighbors",
+        title: "Scan ECFP4 Chemical Space",
         tools: ["find_safe_analogs"],
-        logic: "Computes 2048-bit ECFP4 Tanimoto similarity across 21,299 compounds and derives the dominant consensus_moa.",
+        stageTag: "Compute",
+        logic: "Computes 2048-bit ECFP4 Tanimoto similarity across 21,299 compounds and infers the dominant consensus_moa.",
       },
       {
         step: 2,
-        title: "Profile Closest Annotated Neighbor",
+        title: "Profile Nearest Annotated Neighbor",
         tools: ["profile_compound"],
-        logic: "Audits the nearest named neighbor (by exact pert_id) for targets, PROGENy pathways, 9 renal modules, and T-DIKI / DIRIL risk.",
+        stageTag: "Compute",
+        logic: "Audits the closest named neighbor (by exact pert_id) for targets, PROGENy pathways, renal modules, and T-DIKI/DIRIL status.",
       },
       {
         step: 3,
         title: "Check Neighbor Kidney Literature",
         tools: ["search_literature"],
-        logic: "Retrieves renal efficacy and toxicity publications on the closest neighbor to distinguish known biology from novel scaffolds.",
+        stageTag: "Evidence",
+        logic: "Queries Europe PMC/PubMed (efficacy + nephrotoxicity) for the closest neighbor to separate known biology from novel scaffolds.",
       },
       {
         step: 4,
-        title: "Summarize MoA & Scaffold Advice",
-        tools: ["grounded synthesis"],
-        logic: "Integrates Tanimoto similarity, inferred MoA, safety profile, and literature into scaffold optimization guidance.",
+        title: "Report MoA & Scaffold Guidance",
+        tools: [],
+        stageTag: "Verify & Write",
+        logic: "Verifies neighbor scores and PMIDs, then summarizes inferred pharmacology and the safest scaffold direction.",
       },
     ],
     outputSections: [
@@ -235,15 +279,15 @@ export const SKILLS_CATALOG: SkillLogicDoc[] = [
       "4. Translational Recommendation & Next Steps",
     ],
     examplePrompt:
-      "Find compounds structurally similar to CC(=O)OC1=CC=CC=C1C(=O)O and infer MoA & kidney safety",
+      "Find structural analogs to CC(=O)OC1=CC=CC=C1C(=O)O, infer MoA and NephroSafe risk, and check kidney literature for the top neighbor",
   },
   {
     id: "literature-evidence",
     shortLabel: "Literature & Trials",
-    name: "Literature & Clinical Trial Evidence Synthesis",
+    name: "Bidirectional Literature & Clinical Audit",
     color: "#0284c7",
     maxSteps: 5,
-    whenUsed: "Pure literature/clinical trial checks, novelty audits, or follow-ups on #1 / #2 session candidates.",
+    whenUsed: "Pure PubMed/clinical-trial audits, novelty checks, or multi-turn follow-ups referencing #1 / #2 candidates.",
     allowedTools: [
       "search_literature",
       "search_clinical_trials",
@@ -252,27 +296,31 @@ export const SKILLS_CATALOG: SkillLogicDoc[] = [
     workflow: [
       {
         step: 1,
-        title: "Resolve Target Entities & Context",
-        tools: ["session memory"],
-        logic: "Resolves up to 2 named drugs/genes or #1/#2 ordinals from active session memory while preserving disease context.",
+        title: "Resolve Entities & Disease Context",
+        tools: [],
+        stageTag: "Compute",
+        logic: "Resolves up to 2 named drugs/genes or #1/#2 references from active session memory while preserving the active kidney disease context.",
       },
       {
         step: 2,
         title: "Bidirectional Title/Abstract Search",
         tools: ["search_literature"],
-        logic: "Runs separate kidney efficacy and nephrotoxicity queries in Europe PMC / PubMed and classifies evidence tier & novelty.",
+        stageTag: "Evidence",
+        logic: "Runs separate kidney efficacy and nephrotoxicity searches in Europe PMC/PubMed and assigns evidence tier and novelty.",
       },
       {
         step: 3,
-        title: "Fetch Trials & Missing Risk Score",
+        title: "Fetch Trials & Safety Baseline",
         tools: ["search_clinical_trials", "profile_compound"],
-        logic: "Collects ClinicalTrials.gov kidney studies (phase/status) and fills in T-DIKI / DIRIL safety scores when missing.",
+        stageTag: "Evidence",
+        logic: "Retrieves ClinicalTrials.gov kidney studies (phase/status) and profiles T-DIKI/DIRIL if the compound is not yet in session memory.",
       },
       {
         step: 4,
-        title: "Synthesize Cohesive Review",
-        tools: ["grounded synthesis"],
-        logic: "Weaves paper takeaways, toxicity warnings, and trial status into prose with auto-verified numbered References.",
+        title: "Build Cited Evidence Synthesis",
+        tools: [],
+        stageTag: "Verify & Write",
+        logic: "Weaves retrieved takeaways, toxicity warnings, and trial maturity into prose with auto-appended numbered References.",
       },
     ],
     outputSections: [
@@ -282,7 +330,7 @@ export const SKILLS_CATALOG: SkillLogicDoc[] = [
       "4. Translational Takeaway",
     ],
     examplePrompt:
-      "Profile dexamethasone and summarize its renal literature & clinical trials",
+      "Check Europe PMC literature, nephrotoxicity reports, and clinical trials for dexamethasone in diabetic kidney disease",
   },
   {
     id: "compound-compare",
@@ -290,7 +338,7 @@ export const SKILLS_CATALOG: SkillLogicDoc[] = [
     name: "Head-to-Head Compound Comparison",
     color: "#0d9488",
     maxSteps: 5,
-    whenUsed: "Comparing 2-4 compounds side-by-side (e.g., Compare drug A and drug B, or Compare #1 and #2).",
+    whenUsed: "Comparing 2-4 drugs side-by-side (e.g., Compare dexamethasone and losartan, or Compare #1 and #2).",
     allowedTools: [
       "compare_compounds",
       "search_literature",
@@ -299,27 +347,31 @@ export const SKILLS_CATALOG: SkillLogicDoc[] = [
     workflow: [
       {
         step: 1,
-        title: "Build Multi-Metric Matrix",
+        title: "Build Side-by-Side Matrix",
         tools: ["compare_compounds"],
-        logic: "Aligns 2-4 drugs across clinical phase, MoA, T-DIKI v2, FDA DIRIL, PROGENy pathways, and 9 renal pathology modules.",
+        stageTag: "Compute",
+        logic: "Aligns 2-4 compounds across clinical phase, MoA, T-DIKI v2, FDA DIRIL, PROGENy pathways, and 9 renal pathology modules.",
       },
       {
         step: 2,
         title: "Audit Top-2 Literature & Trials",
         tools: ["search_literature", "search_clinical_trials"],
-        logic: "Fetches kidney efficacy, safety papers, and trial phases for the top two compared drugs (reusing prior session results if cached).",
+        stageTag: "Evidence",
+        logic: "Batches kidney efficacy, nephrotoxicity, and clinical trial checks for the top two compared drugs (reusing prior session results).",
       },
       {
         step: 3,
-        title: "Contrast Mechanistic Trade-offs",
-        tools: ["grounded synthesis"],
-        logic: "Directly contrasts anti-fibrotic potency, podocyte/FAO preservation, nephrotoxicity risk, and clinical maturity.",
+        title: "Contrast Module & Safety Trade-offs",
+        tools: [],
+        stageTag: "Auto-Reflect",
+        logic: "Weighs anti-fibrotic activity (ECM_fibrosis, TGFb_SMAD) against podocyte/metabolic protection (Podocyte_slit, PT_FAO_mito) and risk.",
       },
       {
         step: 4,
         title: "Deliver Context Verdict",
-        tools: ["grounded synthesis"],
-        logic: "States clearly which compound leads on kidney safety vs. efficacy and recommends the better translational fit.",
+        tools: [],
+        stageTag: "Verify & Write",
+        logic: "Verifies all numbers and citations, then states clearly which drug leads on kidney safety vs. anti-fibrotic efficacy.",
       },
     ],
     outputSections: [
