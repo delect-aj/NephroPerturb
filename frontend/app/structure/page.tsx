@@ -41,6 +41,7 @@ export default function StructureSearchPage() {
         const cBody = await apiJson(`/api/v1/compound/${encodeURIComponent(clean)}`);
         const pid = cBody.compound?.pert_id || clean;
         const pname = cBody.compound?.pert_iname || pid;
+        setQuerySmiles(cBody.compound?.canonical_smiles || cBody.compound?.input_smiles || null);
         setResolvedLabel(`${pname} (${pid})`);
         body = { pert_id: pid, top_k: 20 };
       }
@@ -135,7 +136,7 @@ export default function StructureSearchPage() {
           <button
             type="button"
             className="ghost"
-            onClick={() => fill(`Find compounds structurally similar to ${query.trim()}`)}
+            onClick={() => fill(`Find compounds structurally similar to ${query.trim()} and infer MoA & kidney safety`, "structure-moa-evidence")}
           >
             Ask Agent
           </button>

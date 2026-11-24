@@ -22,6 +22,7 @@ const COMPARTMENTS: [string, string][] = [
 
 export default function Workbench() {
   const { fill } = useAgent();
+  const [activePreset, setActivePreset] = useState(SIGNATURE_PRESETS[0].id);
   const [up, setUp] = useState(SIGNATURE_PRESETS[0].up);
   const [down, setDown] = useState(SIGNATURE_PRESETS[0].down);
   const [context, setContext] = useState("kprl");
@@ -124,12 +125,16 @@ export default function Workbench() {
           <button
             key={p.id}
             type="button"
-            className="chip"
+            className={`chip ${activePreset === p.id ? "active" : ""}`}
             onClick={() => {
+              setActivePreset(p.id);
               setUp(p.up);
               setDown(p.down);
               setContext(p.context);
               setCompartment(p.compartment);
+              setData(null);
+              setSelected(null);
+              setError("");
             }}
           >
             {p.label}
@@ -155,7 +160,7 @@ export default function Workbench() {
               onClick={() => {
                 const u = parseGenes(up).join(" ");
                 const d = parseGenes(down).join(" ");
-                fill(`Up: ${u}; Down: ${d}`);
+                fill(`Up: ${u}; Down: ${d}`, "disease-repurposing");
               }}
             >
               Send to Agent

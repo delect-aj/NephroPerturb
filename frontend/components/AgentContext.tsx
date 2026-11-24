@@ -125,7 +125,7 @@ export function AgentProvider({ children }: { children: React.ReactNode }) {
   const [includeLiterature, setIncludeLiterature] = useState(true);
   const [skills, setSkills] = useState<SkillMeta[]>(DEFAULT_SKILLS);
   const [statusInfo, setStatusInfo] = useState<AgentStatusInfo | null>(null);
-  const [open, setOpen] = useState(false);
+  const [open, setOpen] = useState(true);
   const [loading, setLoading] = useState(false);
   const [turns, setTurns] = useState<AgentTurn[]>([]);
   const [error, setError] = useState("");

@@ -1,6 +1,5 @@
 "use client";
 import { useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
 import TargetView from "@/components/TargetView";
 
 const TARGET_PRESETS = ["TGFBR1", "APOL1", "HAVCR1", "JAK2", "SMAD3", "NPHS1", "PPARA"];
@@ -8,11 +7,10 @@ const TARGET_PRESETS = ["TGFBR1", "APOL1", "HAVCR1", "JAK2", "SMAD3", "NPHS1", "
 export default function TargetIndex() {
   const [gene, setGene] = useState("TGFBR1");
   const [active, setActive] = useState("");
-  const router = useRouter();
 
   useEffect(() => {
     const sync = () => {
-      const sym = new URLSearchParams(window.location.search).get("symbol") || "TGFBR1";
+      const sym = (new URLSearchParams(window.location.search).get("symbol") || "TGFBR1").trim();
       setActive(sym);
       setGene(sym);
     };
@@ -26,13 +24,16 @@ export default function TargetIndex() {
     if (!clean) return;
     setActive(clean);
     setGene(clean);
-    router.push(`/target/?symbol=${encodeURIComponent(clean)}`);
+    const nextUrl = `/target/?symbol=${encodeURIComponent(clean)}`;
+    if (window.location.pathname + window.location.search !== nextUrl) {
+      window.history.pushState(null, "", nextUrl);
+    }
   }
 
   return (
     <>
       <div className="page-head">
-        <h1>Target & Genetics</h1>
+        <h1>Target &amp; Genetics</h1>
       </div>
       <div className="sub">
         Nephron compartment expression, direct targeting drugs, and genetic knockdown mimicry.
@@ -46,7 +47,10 @@ export default function TargetIndex() {
             placeholder="Human gene symbol (e.g. TGFBR1, APOL1, HAVCR1)"
             onChange={(e) => setGene(e.target.value)}
             onKeyDown={(e) => {
-              if (e.key === "Enter") go(gene);
+              if (e.key === "Enter") {
+                e.preventDefault();
+                go(gene);
+              }
             }}
           />
           <button type="button" onClick={() => go(gene)}>
@@ -54,7 +58,12 @@ export default function TargetIndex() {
           </button>
           <div className="chip-row">
             {TARGET_PRESETS.map((g) => (
-              <button key={g} type="button" className="chip" onClick={() => go(g)}>
+              <button
+                key={g}
+                type="button"
+                className={`chip ${active.toUpperCase() === g ? "active" : ""}`}
+                onClick={() => go(g)}
+              >
                 {g}
               </button>
             ))}

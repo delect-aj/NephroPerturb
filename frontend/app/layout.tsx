@@ -18,9 +18,11 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <AgentProvider>
           <div className="shell">
             <Nav />
-            <main className="main">{children}</main>
+            <main className="main">
+              <AgentDrawer />
+              {children}
+            </main>
           </div>
-          <AgentDrawer />
         </AgentProvider>
       </body>
     </html>

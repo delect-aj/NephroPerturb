@@ -11,7 +11,7 @@ function fmt(v: any) {
   return v == null ? "—" : Number(v).toFixed(1);
 }
 
-export default function CompoundView({ id }: { id: string }) {
+export default function CompoundView({ id, onSelectCompound }: { id: string; onSelectCompound?: (tok: string) => void }) {
   const { fill } = useAgent();
   const [data, setData] = useState<any>(null);
   const [explain, setExplain] = useState<any>(null);
@@ -75,7 +75,7 @@ export default function CompoundView({ id }: { id: string }) {
         <button
           type="button"
           className="ghost mini"
-          onClick={() => fill(`Profile ${label}`)}
+          onClick={() => fill(`Profile ${label} and audit its T-DIKI kidney safety, literature, and clinical trials`, "toxicity-rescue")}
         >
           Ask Agent
         </button>
@@ -159,16 +159,27 @@ export default function CompoundView({ id }: { id: string }) {
           ) : null}
           <h2 style={{ marginTop: 16 }}>Scaffold siblings (same InChIKey-14)</h2>
           <div className="chip-row">
-            {(data.scaffold_siblings || []).slice(0, 12).map((p: string) => (
-              <Link
-                key={p}
-                prefetch={false}
-                className="badge grey mono"
-                href={`/compound/?id=${encodeURIComponent(p)}`}
-              >
-                {p}
-              </Link>
-            ))}
+            {(data.scaffold_siblings || []).slice(0, 12).map((p: string) =>
+              onSelectCompound ? (
+                <button
+                  key={p}
+                  type="button"
+                  className="chip mono"
+                  onClick={() => onSelectCompound(p)}
+                >
+                  {p}
+                </button>
+              ) : (
+                <Link
+                  key={p}
+                  prefetch={false}
+                  className="badge grey mono"
+                  href={`/compound/?id=${encodeURIComponent(p)}`}
+                >
+                  {p}
+                </Link>
+              )
+            )}
           </div>
         </div>
       </div>

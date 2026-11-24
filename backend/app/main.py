@@ -8,6 +8,7 @@ import threading
 import uuid
 from datetime import datetime, timezone
 from pathlib import Path
+from urllib.parse import quote
 from typing import Dict, List, Optional
 
 import numpy as np
@@ -621,13 +622,21 @@ def downloads():
 
 
 if _STATIC_DIR and Path(_STATIC_DIR).is_dir():
+    _static_root = Path(_STATIC_DIR)
+
     @app.get("/compound/{token}")
     def _redirect_compound(token: str):
-        return RedirectResponse(url=f"/compound/?id={token}")
+        static_file = _static_root / "compound" / token
+        if static_file.is_file():
+            return FileResponse(str(static_file))
+        return RedirectResponse(url=f"/compound/?id={quote(token, safe='')}")
 
     @app.get("/target/{symbol}")
     def _redirect_target(symbol: str):
-        return RedirectResponse(url=f"/target/?symbol={symbol}")
+        static_file = _static_root / "target" / symbol
+        if static_file.is_file():
+            return FileResponse(str(static_file))
+        return RedirectResponse(url=f"/target/?symbol={quote(symbol, safe='')}")
 
     @app.get("/downloads")
     @app.get("/downloads/")

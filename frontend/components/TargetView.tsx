@@ -60,7 +60,7 @@ export default function TargetView({ symbol }: { symbol: string }) {
         <button
           type="button"
           className="ghost mini"
-          onClick={() => fill(`Which compounds mimic knockdown of ${data.gene.symbol}?`)}
+          onClick={() => fill(`Analyze ${data.gene.symbol} in kidney disease: check nephron expression, top knockdown-mimicking drugs, lead safety, and literature evidence`, "target-to-lead")}
         >
           Ask Agent
         </button>
@@ -142,34 +142,40 @@ export default function TargetView({ symbol }: { symbol: string }) {
           )}
         </div>
         <div className="card">
-          <h2>Compounds mimicking gene knockdown</h2>
-          <div className="scroll" style={{ maxHeight: 360 }}>
-            <table>
-              <thead>
-                <tr>
-                  <th>#</th>
-                  <th>Compound</th>
-                  <th>Cosine Similarity</th>
-                </tr>
-              </thead>
-              <tbody>
-                {(data.mimicking_compounds || []).map((c: any, i: number) => (
-                  <tr key={c.pert_id}>
-                    <td className="mono muted">{i + 1}</td>
-                    <td>
-                      <Link
-                        href={`/compound/?id=${encodeURIComponent(c.pert_id)}`}
-                        prefetch={false}
-                      >
-                        {c.pert_iname || c.pert_id}
-                      </Link>
-                    </td>
-                    <td className="mono">{Number(c.similarity).toFixed(3)}</td>
+          <h2>Compounds mimicking gene knockdown ({(data.mimicking_compounds || []).length})</h2>
+          {(data.mimicking_compounds || []).length ? (
+            <div className="scroll" style={{ maxHeight: 360 }}>
+              <table>
+                <thead>
+                  <tr>
+                    <th>#</th>
+                    <th>Compound</th>
+                    <th>Cosine Similarity</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+                </thead>
+                <tbody>
+                  {(data.mimicking_compounds || []).map((c: any, i: number) => (
+                    <tr key={c.pert_id}>
+                      <td className="mono muted">{i + 1}</td>
+                      <td>
+                        <Link
+                          href={`/compound/?id=${encodeURIComponent(c.pert_id)}`}
+                          prefetch={false}
+                        >
+                          {c.pert_iname || c.pert_id}
+                        </Link>
+                      </td>
+                      <td className="mono">{Number(c.similarity).toFixed(3)}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          ) : (
+            <div className="muted small" style={{ padding: 12 }}>
+              No LINCS knockdown mimicry profiles available for {data.gene.symbol}
+            </div>
+          )}
         </div>
       </div>
     </>

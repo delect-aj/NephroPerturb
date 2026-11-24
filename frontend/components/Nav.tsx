@@ -98,8 +98,6 @@ const LINKS = [
   ["/compound", "Compound Explorer", "compound"],
   ["/structure", "Structure Search", "structure"],
   ["/cases", "Disease Cohorts", "cases"],
-  ["/downloads", "Downloads", "downloads"],
-  ["/docs", "API & MCP Docs", "docs"],
 ] as const;
 
 export default function Nav() {

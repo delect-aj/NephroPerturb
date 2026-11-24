@@ -1,17 +1,15 @@
 "use client";
 import { useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
 import CompoundView from "@/components/CompoundView";
 import { COMPOUND_PRESETS } from "@/lib/examples";
 
 export default function CompoundIndexPage() {
   const [query, setQuery] = useState("dexamethasone");
   const [active, setActive] = useState("");
-  const router = useRouter();
 
   useEffect(() => {
     const sync = () => {
-      const q = new URLSearchParams(window.location.search).get("id") || "dexamethasone";
+      const q = (new URLSearchParams(window.location.search).get("id") || "dexamethasone").trim();
       setActive(q);
       setQuery(q);
     };
@@ -25,7 +23,10 @@ export default function CompoundIndexPage() {
     if (!clean) return;
     setActive(clean);
     setQuery(clean);
-    router.push(`/compound/?id=${encodeURIComponent(clean)}`);
+    const nextUrl = `/compound/?id=${encodeURIComponent(clean)}`;
+    if (window.location.pathname + window.location.search !== nextUrl) {
+      window.history.pushState(null, "", nextUrl);
+    }
   }
 
   return (
@@ -45,7 +46,10 @@ export default function CompoundIndexPage() {
             placeholder="Compound name, BRD ID, or InChIKey (e.g. dexamethasone, BRD-A10188456)"
             onChange={(e) => setQuery(e.target.value)}
             onKeyDown={(e) => {
-              if (e.key === "Enter") go(query);
+              if (e.key === "Enter") {
+                e.preventDefault();
+                go(query);
+              }
             }}
           />
           <button type="button" onClick={() => go(query)}>
@@ -53,14 +57,19 @@ export default function CompoundIndexPage() {
           </button>
           <div className="chip-row">
             {COMPOUND_PRESETS.map((c) => (
-              <button key={c} type="button" className="chip" onClick={() => go(c)}>
+              <button
+                key={c}
+                type="button"
+                className={`chip ${active.toLowerCase() === c.toLowerCase() ? "active" : ""}`}
+                onClick={() => go(c)}
+              >
                 {c}
               </button>
             ))}
           </div>
         </div>
       </div>
-      {active ? <CompoundView id={active} /> : null}
+      {active ? <CompoundView id={active} onSelectCompound={go} /> : null}
     </>
   );
 }

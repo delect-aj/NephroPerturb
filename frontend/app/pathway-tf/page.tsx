@@ -6,21 +6,49 @@ import { useAgent } from "@/components/AgentContext";
 import { apiJson } from "@/lib/api";
 import { PATHWAY_PRESETS } from "@/lib/examples";
 
+const PROGENY_IDS = ["TGFb", "NFkB", "JAK-STAT", "Hypoxia", "MAPK", "EGFR", "PI3K", "TNFa", "VEGF", "WNT", "p53"];
+const TF_IDS = ["SMAD3", "SMAD4", "PPARA", "PPARG", "STAT1", "STAT3", "HIF1A", "NFE2L2", "NR3C1", "WT1", "FOXO3"];
+const MODULE_IDS = [
+  "PT_FAO_mito",
+  "Podocyte_slit",
+  "ECM_fibrosis",
+  "Complement",
+  "Ferroptosis_pyroptosis",
+  "ER_stress_UPR",
+  "RAAS",
+  "Tubular_injury_KIM1",
+  "Inflammation_NFkB",
+  "TGFb_SMAD",
+  "Apoptosis_p53",
+  "Autophagy",
+];
+
 export default function PathwayTF() {
   const { fill } = useAgent();
-  const [rows, setRows] = useState<{ name: string; dir: number }[]>(PATHWAY_PRESETS[0].rows);
+  const [rows, setRows] = useState<{ name: string; dir: number }[]>(
+    () => PATHWAY_PRESETS[0].rows.map((r) => ({ ...r }))
+  );
+  const [activePreset, setActivePreset] = useState<string>(PATHWAY_PRESETS[0].id);
   const [data, setData] = useState<any>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
-  async function run(customRows?: { name: string; dir: number }[]) {
-    const useRows = customRows || rows;
+  async function run(customRows?: { name: string; dir: number }[], syncUrl = false) {
+    const useRows = (customRows || rows).filter((r) => r.name.trim());
+    if (!useRows.length) {
+      setError("Please enter at least one pathway, TF, or renal module.");
+      return;
+    }
     setLoading(true);
     setError("");
+    if (syncUrl) {
+      const q = useRows.map((r) => `${r.name.trim()}:${r.dir}`).join(",");
+      window.history.replaceState(null, "", `/pathway-tf/?targets=${encodeURIComponent(q)}`);
+    }
     try {
       const targets: Record<string, number> = {};
       useRows.forEach((r) => {
-        if (r.name.trim()) targets[r.name.trim()] = r.dir;
+        targets[r.name.trim()] = r.dir;
       });
       const body = await apiJson("/api/v1/query/pathway-tf", {
         method: "POST",
@@ -47,12 +75,25 @@ export default function PathwayTF() {
         .filter(Boolean) as { name: string; dir: number }[];
       if (parsed.length) {
         setRows(parsed);
-        run(parsed);
+        setActivePreset("");
+        run(parsed, false);
         return;
       }
     }
-    run(PATHWAY_PRESETS[0].rows);
+    run(PATHWAY_PRESETS[0].rows.map((r) => ({ ...r })), false);
   }, []);
+
+  function addQuickTarget(id: string) {
+    setActivePreset("");
+    const exists = rows.some((r) => r.name.trim().toUpperCase() === id.toUpperCase());
+    if (exists) return;
+    const emptyIdx = rows.findIndex((r) => !r.name.trim());
+    const next =
+      emptyIdx >= 0
+        ? rows.map((r, idx) => (idx === emptyIdx ? { ...r, name: id } : r))
+        : [...rows, { name: id, dir: -1 }];
+    setRows(next);
+  }
 
   return (
     <>
@@ -69,10 +110,12 @@ export default function PathwayTF() {
           <button
             key={p.id}
             type="button"
-            className="chip"
+            className={`chip ${activePreset === p.id ? "active" : ""}`}
             onClick={() => {
-              setRows(p.rows);
-              run(p.rows);
+              const cloned = p.rows.map((r) => ({ ...r }));
+              setRows(cloned);
+              setActivePreset(p.id);
+              run(cloned, true);
             }}
           >
             {p.label}
@@ -89,16 +132,24 @@ export default function PathwayTF() {
               style={{ flex: 1, minWidth: 200 }}
               value={row.name}
               placeholder="Pathway, TF, or renal module (e.g. TGFb, SMAD3, NFkB)"
-              onChange={(e) =>
-                setRows(rows.map((r, j) => (j === i ? { ...r, name: e.target.value } : r)))
-              }
+              onChange={(e) => {
+                setActivePreset("");
+                setRows(rows.map((r, j) => (j === i ? { ...r, name: e.target.value } : r)));
+              }}
+              onKeyDown={(e) => {
+                if (e.key === "Enter") {
+                  e.preventDefault();
+                  run(undefined, true);
+                }
+              }}
             />
             <select
               value={row.dir}
               style={{ width: 145 }}
-              onChange={(e) =>
-                setRows(rows.map((r, j) => (j === i ? { ...r, dir: Number(e.target.value) } : r)))
-              }
+              onChange={(e) => {
+                setActivePreset("");
+                setRows(rows.map((r, j) => (j === i ? { ...r, dir: Number(e.target.value) } : r)));
+              }}
             >
               <option value={1}>Activate (+1)</option>
               <option value={-1}>Inhibit (−1)</option>
@@ -106,7 +157,10 @@ export default function PathwayTF() {
             <button
               type="button"
               className="ghost mini"
-              onClick={() => setRows(rows.filter((_, j) => j !== i))}
+              onClick={() => {
+                setActivePreset("");
+                setRows(rows.length > 1 ? rows.filter((_, j) => j !== i) : [{ name: "", dir: -1 }]);
+              }}
             >
               Remove
             </button>
@@ -116,11 +170,14 @@ export default function PathwayTF() {
           <button
             type="button"
             className="ghost"
-            onClick={() => setRows([...rows, { name: "", dir: -1 }])}
+            onClick={() => {
+              setActivePreset("");
+              setRows([...rows, { name: "", dir: -1 }]);
+            }}
           >
             + Add target
           </button>
-          <button type="button" onClick={() => run()} disabled={loading}>
+          <button type="button" onClick={() => run(undefined, true)} disabled={loading}>
             {loading && <span className="spinner" />}
             {loading ? "Searching..." : "Search candidates"}
           </button>
@@ -131,15 +188,38 @@ export default function PathwayTF() {
               const parts = rows
                 .filter((r) => r.name.trim())
                 .map((r) => `${r.dir < 0 ? "Inhibit" : "Activate"} ${r.name.trim()}`);
-              if (parts.length) fill(parts.join(", "));
+              if (parts.length) fill(parts.join(", "), "disease-repurposing");
             }}
           >
             Ask Agent
           </button>
         </div>
 
-        <div className="small muted" style={{ marginTop: 10 }}>
-          <strong>Valid IDs:</strong> PROGENy (<span className="mono">TGFb, NFkB, JAK-STAT, Hypoxia, MAPK, EGFR, PI3K, TNFa, VEGF, WNT, p53</span>) · CollecTRI TFs (<span className="mono">SMAD3, SMAD4, PPARA, PPARG, STAT1, NFKB1, RELA, HIF1A</span>) · Renal modules (<span className="mono">PT_FAO_mito, Podocyte_slit, ECM_fibrosis, Complement, Ferroptosis_pyroptosis, ER_stress_UPR, RAAS, Tubular_injury_KIM1, Inflammation_NFkB, TGFb_SMAD, Apoptosis_p53, Autophagy</span>)
+        <div className="small muted" style={{ marginTop: 10, display: "flex", flexDirection: "column", gap: 5 }}>
+          <div className="chip-row">
+            <strong>PROGENy:</strong>
+            {PROGENY_IDS.map((id) => (
+              <button key={id} type="button" className="chip mono" style={{ padding: "2px 7px", fontSize: 11 }} onClick={() => addQuickTarget(id)}>
+                +{id}
+              </button>
+            ))}
+          </div>
+          <div className="chip-row">
+            <strong>CollecTRI TFs:</strong>
+            {TF_IDS.map((id) => (
+              <button key={id} type="button" className="chip mono" style={{ padding: "2px 7px", fontSize: 11 }} onClick={() => addQuickTarget(id)}>
+                +{id}
+              </button>
+            ))}
+          </div>
+          <div className="chip-row">
+            <strong>Renal modules:</strong>
+            {MODULE_IDS.map((id) => (
+              <button key={id} type="button" className="chip mono" style={{ padding: "2px 7px", fontSize: 11 }} onClick={() => addQuickTarget(id)}>
+                +{id}
+              </button>
+            ))}
+          </div>
         </div>
 
         {error && (
