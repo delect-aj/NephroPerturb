@@ -41,7 +41,7 @@ export default function AgentDrawer() {
     }
   }, [focusTick, pathname, setOpen]);
 
-  if (pathname === "/") return null;
+  if (pathname === "/" || pathname.startsWith("/skills")) return null;
 
   return (
     <section

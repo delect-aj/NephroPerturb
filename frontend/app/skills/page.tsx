@@ -1,6 +1,7 @@
 "use client";
 import type { CSSProperties } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useAgent } from "@/components/AgentContext";
 import {
   SHARED_SAFEGUARDS,
@@ -22,6 +23,7 @@ function stageBadgeClass(tag?: string): string {
 
 export default function SkillsPage() {
   const { fill } = useAgent();
+  const router = useRouter();
 
   return (
     <>
@@ -49,7 +51,7 @@ export default function SkillsPage() {
       <div className="row" style={{ marginBottom: 9 }}>
         <h2 style={{ margin: 0, fontSize: 15 }}>Step-by-Step Workflows</h2>
         <span className="small muted">
-          Click &quot;Try Example ↗&quot; to preload that Skill and prompt into the Research Assistant
+          Click &quot;Try Example ↗&quot; to open that Skill and prompt in the Agent Console
         </span>
       </div>
 
@@ -76,8 +78,8 @@ export default function SkillsPage() {
                 <button
                   type="button"
                   className="ghost mini"
-                  onClick={() => fill(sk.examplePrompt, sk.id)}
-                  title="Open Research Assistant prefilled with this Skill's example"
+                  onClick={() => { fill(sk.examplePrompt, sk.id); router.push("/"); }}
+                  title="Open Agent Console prefilled with this Skill's example"
                 >
                   Try Example ↗
                 </button>
