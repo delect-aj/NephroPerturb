@@ -1,5 +1,6 @@
 "use client";
 import React from "react";
+import { getTableHeaderNotes } from "@/lib/tableNotes";
 
 const TOKEN_RE =
   /(\[PMID:\s*\d{5,9}\]|\[NCT\d{8}\]|\*\*[^*]+\*\*|\*[^*\n]+\*|`[^`]+`)/g;
@@ -89,28 +90,41 @@ export default function CitationText({ text }: { text: string }) {
         bodyRows.push(splitTableRow(lines[j]));
         j += 1;
       }
+      const headerNotes = getTableHeaderNotes(headers);
       nodes.push(
-        <div key={`tbl-${i}`} className="cite-table-wrap">
-          <table>
-            <thead>
-              <tr>
-                {headers.map((h, hIdx) => (
-                  <th key={`th-${i}-${hIdx}`}>{renderInline(h, `th-${i}-${hIdx}`)}</th>
-                ))}
-              </tr>
-            </thead>
-            <tbody>
-              {bodyRows.map((row, rIdx) => (
-                <tr key={`tr-${i}-${rIdx}`}>
-                  {headers.map((_, cIdx) => (
-                    <td key={`td-${i}-${rIdx}-${cIdx}`}>
-                      {renderInline(row[cIdx] || "—", `td-${i}-${rIdx}-${cIdx}`)}
-                    </td>
+        <div key={`tbl-${i}`} className="cite-table-block">
+          <div className="cite-table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  {headers.map((h, hIdx) => (
+                    <th key={`th-${i}-${hIdx}`}>{renderInline(h, `th-${i}-${hIdx}`)}</th>
                   ))}
                 </tr>
+              </thead>
+              <tbody>
+                {bodyRows.map((row, rIdx) => (
+                  <tr key={`tr-${i}-${rIdx}`}>
+                    {headers.map((_, cIdx) => (
+                      <td key={`td-${i}-${rIdx}-${cIdx}`}>
+                        {renderInline(row[cIdx] || "—", `td-${i}-${rIdx}-${cIdx}`)}
+                      </td>
+                    ))}
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+          {headerNotes.length > 0 && (
+            <div className="table-footnote">
+              {headerNotes.map((n, nIdx) => (
+                <React.Fragment key={n.term}>
+                  {nIdx > 0 && " · "}
+                  <strong>{n.term}</strong>: {n.desc}
+                </React.Fragment>
               ))}
-            </tbody>
-          </table>
+            </div>
+          )}
         </div>
       );
       i = j;

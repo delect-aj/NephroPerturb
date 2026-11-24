@@ -3,6 +3,7 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { DikiBadge, DirilBadge, TanimotoBar } from "@/components/Badges";
 import CitationText from "@/components/CitationText";
+import { COMPARE_TABLE_NOTES, getTableHeaderNotes } from "@/lib/tableNotes";
 import type { AgentTurn } from "@/components/AgentContext";
 
 function EvidenceTierBadge({ tier }: { tier?: string }) {
@@ -437,6 +438,20 @@ export default function AgentResult({
               </table>
             </div>
           )}
+          {cols.length > 0 && rows.length > 0 && (() => {
+            const notes = getTableHeaderNotes(cols.map((c: any) => c.label || c.key));
+            if (!notes.length) return null;
+            return (
+              <div className="table-footnote">
+                {notes.map((n, idx) => (
+                  <span key={n.term}>
+                    {idx > 0 && " · "}
+                    <strong>{n.term}</strong>: {n.desc}
+                  </span>
+                ))}
+              </div>
+            );
+          })()}
         </div>
       )}
 
@@ -515,6 +530,14 @@ export default function AgentResult({
                 )}
               </tbody>
             </table>
+          </div>
+          <div className="table-footnote">
+            {COMPARE_TABLE_NOTES.map((n, idx) => (
+              <span key={n.term}>
+                {idx > 0 && " · "}
+                <strong>{n.term}</strong>: {n.desc}
+              </span>
+            ))}
           </div>
         </div>
       )}

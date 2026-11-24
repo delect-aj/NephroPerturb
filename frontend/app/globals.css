@@ -725,3 +725,22 @@ button.quick-example-card.filled {
   overflow: hidden;
   font-family: ui-monospace, Menlo, Consolas, monospace;
 }
+
+/* Compact table header footnotes */
+.cite-table-block {
+  margin: 8px 0 10px;
+}
+.cite-table-block .cite-table-wrap {
+  margin: 0;
+}
+.table-footnote {
+  font-size: 10.5px;
+  line-height: 1.4;
+  color: #64748b;
+  margin-top: 4px;
+  padding: 0 2px;
+}
+.table-footnote strong {
+  color: #475569;
+  font-weight: 600;
+}
