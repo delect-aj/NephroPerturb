@@ -55,7 +55,6 @@ export default function Home() {
   const [followUp, setFollowUp] = useState("");
   const consoleRef = useRef<HTMLTextAreaElement>(null);
   const heroRef = useRef<HTMLElement>(null);
-  const threadEndRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     if (focusTick > 0) {
@@ -64,11 +63,6 @@ export default function Home() {
     }
   }, [focusTick]);
 
-  useEffect(() => {
-    if (turns.length > 0) {
-      threadEndRef.current?.scrollIntoView({ behavior: "smooth", block: "nearest" });
-    }
-  }, [turns.length, turns[turns.length - 1]?.steps?.length, turns[turns.length - 1]?.status]);
 
   const quickExamplesSection = (
     <section className="quick-examples" aria-label="Example Research Queries">
@@ -221,8 +215,8 @@ export default function Home() {
         </div>
       </section>
 
-      {/* Compact clickable examples right under Run Research when starting */}
-      {turns.length === 0 && quickExamplesSection}
+      {/* Compact clickable examples always pinned directly below Run Research */}
+      {quickExamplesSection}
 
       {/* Multi-Turn Conversation Session Thread */}
       {turns.length > 0 && (
@@ -247,7 +241,7 @@ export default function Home() {
           ))}
 
           {/* Multi-turn follow-up bar */}
-          <div className="followup-bar" ref={threadEndRef}>
+          <div className="followup-bar">
             <input
               type="text"
               placeholder="Ask a follow-up in this session (e.g. Compare #1 and #2, or Check trials for #3)..."
@@ -277,8 +271,6 @@ export default function Home() {
           </div>
         </section>
       )}
-
-      {turns.length > 0 && <div style={{ marginTop: 14 }}>{quickExamplesSection}</div>}
 
       {/* Platform Overview: KPI Stats & 4-Step Pipeline */}
       <div className="grid cols-6" style={{ marginBottom: 12, marginTop: 14 }}>
