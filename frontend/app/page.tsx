@@ -1,10 +1,10 @@
 "use client";
+import type { CSSProperties } from "react";
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { useAgent } from "@/components/AgentContext";
 import AgentResult from "@/components/AgentResult";
-import ExampleCards from "@/components/ExampleCards";
-import { RESEARCH_PLAYBOOKS } from "@/lib/examples";
+import { QUICK_EXAMPLES } from "@/lib/examples";
 
 const STATS = [
   ["21,299", "Compounds"],
@@ -42,11 +42,11 @@ export default function Home() {
     includeLiterature,
     setIncludeLiterature,
     skills,
-    statusInfo,
     loading,
     turns,
     error,
     focusTick,
+    fill,
     run,
     stop,
     newSession,
@@ -70,8 +70,40 @@ export default function Home() {
     }
   }, [turns.length, turns[turns.length - 1]?.steps?.length, turns[turns.length - 1]?.status]);
 
-  const quota = statusInfo?.quota;
-  const llmReady = Boolean(statusInfo?.llm_configured);
+  const quickExamplesSection = (
+    <section className="quick-examples" aria-label="Example Research Queries">
+      <div className="quick-examples-head">
+        <h2>Example Inputs</h2>
+        <span className="small muted">
+          Click any example to fill the Run Research box — edit if needed, then click Run Research
+        </span>
+      </div>
+      <div className="quick-example-grid">
+        {QUICK_EXAMPLES.map((ex) => {
+          const isFilled = prompt.trim() === ex.prompt.trim();
+          return (
+            <button
+              key={ex.id}
+              type="button"
+              className={`quick-example-card ${isFilled ? "filled" : ""}`}
+              style={{ "--ex-color": ex.color } as CSSProperties}
+              onClick={() => fill(ex.prompt, ex.skillId)}
+              title="Click to insert into Run Research box"
+            >
+              <div className="quick-example-top">
+                <span className="badge" style={{ background: `${ex.color}18`, color: ex.color }}>
+                  {ex.category}
+                </span>
+                <span className="quick-fill-hint">{isFilled ? "Filled ✓" : "Fill ↗"}</span>
+              </div>
+              <div className="quick-example-title">{ex.title}</div>
+              <div className="quick-example-prompt">{ex.prompt}</div>
+            </button>
+          );
+        })}
+      </div>
+    </section>
+  );
 
   return (
     <>
@@ -79,18 +111,8 @@ export default function Home() {
         <div>
           <div className="row" style={{ gap: 6, marginBottom: 6 }}>
             <span className="hero-kicker" style={{ marginBottom: 0 }}>
-              Skill-Guided ReAct · Europe PMC &amp; ClinicalTrials · Zero Hallucination
+              Skill-Guided ReAct · Europe PMC &amp; ClinicalTrials
             </span>
-            {statusInfo && (
-              <span
-                className={`quota-pill ${llmReady && quota?.allowed ? "ready" : ""}`}
-                title="Hourly per-IP DeepSeek ReAct quota (auto-falls back to 0-LLM multi-step when depleted)"
-              >
-                {llmReady
-                  ? `DeepSeek ReAct · ${quota?.remaining_hourly ?? 0}/${quota?.hourly_limit ?? 20} left/hr`
-                  : "0-LLM Multi-Step Ready"}
-              </span>
-            )}
           </div>
 
           <h1>NephroAgent</h1>
@@ -124,7 +146,7 @@ export default function Home() {
           <div className="agent-box">
             <textarea
               ref={consoleRef}
-              placeholder="Ask a multi-step research question (e.g. Find reversal drugs for DKD glomeruli, rescue toxic hits, and verify literature) or follow up with #1 / #2..."
+              placeholder="Ask a multi-step research question (e.g. Find reversal drugs for DKD glomeruli, rescue toxic hits, and verify literature) or click an example below..."
               value={prompt}
               onChange={(e) => setPrompt(e.target.value)}
               onKeyDown={(e) => {
@@ -199,26 +221,8 @@ export default function Home() {
         </div>
       </section>
 
-      <div className="grid cols-6" style={{ marginBottom: 12 }}>
-        {STATS.map(([v, l]) => (
-          <div className="card kpi-card" key={l}>
-            <div className="stat">{v}</div>
-            <div className="stat-label">{l}</div>
-          </div>
-        ))}
-      </div>
-
-      <div className="how-strip">
-        {HOW_STEPS.map(([title, desc], idx) => (
-          <div className="how-step" key={title}>
-            <div className="how-num">{idx + 1}</div>
-            <div>
-              <div style={{ fontWeight: 700, fontSize: 12.5 }}>{title}</div>
-              <div className="small muted">{desc}</div>
-            </div>
-          </div>
-        ))}
-      </div>
+      {/* Compact clickable examples right under Run Research when starting */}
+      {turns.length === 0 && quickExamplesSection}
 
       {/* Multi-Turn Conversation Session Thread */}
       {turns.length > 0 && (
@@ -274,57 +278,29 @@ export default function Home() {
         </section>
       )}
 
-      {/* Multi-Step Deep Research Playbooks */}
-      <div className="row" style={{ marginBottom: 8, marginTop: turns.length ? 16 : 0 }}>
-        <h2 style={{ margin: 0, fontSize: 15 }}>Deep Research Playbooks</h2>
-        <span className="small muted">Multi-step workflows combining scoring, safety reflection &amp; live PubMed/trials</span>
-      </div>
-      <div className="example-grid" style={{ marginBottom: 14 }}>
-        {RESEARCH_PLAYBOOKS.map((pb) => (
-          <div
-            key={pb.id}
-            className="example-card"
-            style={{ "--ex-color": pb.color } as any}
-            onClick={() => run(pb.prompt, { skillId: pb.skillId })}
-            role="button"
-            tabIndex={0}
-            onKeyDown={(e) => {
-              if (e.key === "Enter" || e.key === " ") {
-                e.preventDefault();
-                run(pb.prompt, { skillId: pb.skillId });
-              }
-            }}
-          >
-            <div className="row" style={{ justifyContent: "space-between", gap: 6 }}>
-              <span className="badge" style={{ background: `${pb.color}18`, color: pb.color }}>
-                {pb.badge}
-              </span>
-              <button
-                type="button"
-                className="mini"
-                disabled={loading}
-                onClick={(e) => {
-                  e.stopPropagation();
-                  run(pb.prompt, { skillId: pb.skillId });
-                }}
-              >
-                Run ▶
-              </button>
-            </div>
-            <div className="example-title">{pb.title}</div>
-            <div className="example-sub">{pb.subtitle}</div>
-            <div className="example-prompt" title={pb.prompt}>
-              {pb.prompt}
-            </div>
+      {turns.length > 0 && <div style={{ marginTop: 14 }}>{quickExamplesSection}</div>}
+
+      {/* Platform Overview: KPI Stats & 4-Step Pipeline */}
+      <div className="grid cols-6" style={{ marginBottom: 12, marginTop: 14 }}>
+        {STATS.map(([v, l]) => (
+          <div className="card kpi-card" key={l}>
+            <div className="stat">{v}</div>
+            <div className="stat-label">{l}</div>
           </div>
         ))}
       </div>
 
-      <div className="row" style={{ marginBottom: 8 }}>
-        <h2 style={{ margin: 0, fontSize: 15 }}>SOP Showcase Queries (SOP-1 to SOP-6)</h2>
-        <span className="small muted">Click card to prefill, or Run ▶ to execute in the agent console</span>
+      <div className="how-strip">
+        {HOW_STEPS.map(([title, desc], idx) => (
+          <div className="how-step" key={title}>
+            <div className="how-num">{idx + 1}</div>
+            <div>
+              <div style={{ fontWeight: 700, fontSize: 12.5 }}>{title}</div>
+              <div className="small muted">{desc}</div>
+            </div>
+          </div>
+        ))}
       </div>
-      <ExampleCards />
 
       <div className="card" style={{ marginTop: 14 }}>
         <h2>Knowledge Base Modules</h2>

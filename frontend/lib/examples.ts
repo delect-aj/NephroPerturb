@@ -51,6 +51,89 @@ export const RESEARCH_PLAYBOOKS: ResearchPlaybook[] = [
   },
 ];
 
+export interface QuickExample {
+  id: string;
+  skillId: string | null;
+  category: string;
+  title: string;
+  color: string;
+  prompt: string;
+}
+
+export const QUICK_EXAMPLES: QuickExample[] = [
+  {
+    id: "qe-dkd",
+    skillId: "disease-repurposing",
+    category: "Disease Cohort",
+    title: "DKD Reversal + Literature",
+    color: "#2563eb",
+    prompt:
+      "Find reversal drugs for the DKD glomeruli case, auto-filter High T-DIKI hits if needed, and verify literature & clinical trials for top candidates",
+  },
+  {
+    id: "qe-tox",
+    skillId: "toxicity-rescue",
+    category: "Safety & Rescue",
+    title: "Tacrolimus Toxicity Rescue",
+    color: "#dc2626",
+    prompt:
+      "Is tacrolimus nephrotoxic? Explain T-DIKI drivers, audit safety literature, and find safer Low-DIKI structural analogs",
+  },
+  {
+    id: "qe-target",
+    skillId: "target-to-lead",
+    category: "Target -> Lead",
+    title: "TGFBR1 Knockdown Mimics",
+    color: "#d97706",
+    prompt:
+      "Analyze TGFBR1 in kidney disease: check nephron expression, top knockdown-mimicking drugs, lead safety, and literature evidence",
+  },
+  {
+    id: "qe-compare",
+    skillId: "compound-compare",
+    category: "Compare Drugs",
+    title: "Dexamethasone vs. Losartan",
+    color: "#0d9488",
+    prompt:
+      "Compare dexamethasone and losartan head-to-head on renal fibrosis modules, podocyte protection, T-DIKI safety, and kidney literature",
+  },
+  {
+    id: "qe-signature",
+    skillId: "disease-repurposing",
+    category: "Gene Signature",
+    title: "Up / Down Fibrosis Genes",
+    color: "#14b8a6",
+    prompt:
+      "Up: COL1A1 COL3A1 FN1 TGFB1 SERPINE1 LCN2 HAVCR1; Down: NPHS1 NPHS2 PODXL PPARA PPARGC1A CPT1A. Approved drugs only, low nephrotoxicity risk",
+  },
+  {
+    id: "qe-pathway",
+    skillId: null,
+    category: "Pathway & TF",
+    title: "SMAD3/TGFb (-) · PPARA (+)",
+    color: "#7c3aed",
+    prompt: "Inhibit SMAD3 and TGFb, activate PPARA",
+  },
+  {
+    id: "qe-smiles",
+    skillId: "structure-moa-evidence",
+    category: "SMILES Structure",
+    title: "Structure & MoA from SMILES",
+    color: "#4f46e5",
+    prompt:
+      "Find compounds structurally similar to CC(=O)OC1=CC=CC=C1C(=O)O and infer MoA & kidney safety",
+  },
+  {
+    id: "qe-profile",
+    skillId: "literature-evidence",
+    category: "Compound Profile",
+    title: "Dexamethasone Profile & Trials",
+    color: "#059669",
+    prompt:
+      "Profile dexamethasone and summarize its renal literature & clinical trials",
+  },
+];
+
 export interface AgentExample {
   id: string;
   title: string;
