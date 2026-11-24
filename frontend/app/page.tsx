@@ -276,7 +276,7 @@ export default function Home() {
       <div className="grid cols-6" style={{ marginBottom: 12, marginTop: 14 }}>
         {STATS.map(([v, l, href]) =>
           href ? (
-            <Link key={l} href={href} prefetch={false} className="card kpi-card kpi-link" title="View all 6 Agent Skills and step-by-step logic">
+            <Link key={l} href={href} prefetch={false} className="card kpi-card kpi-link" title="View all 6 Agent Skills and step-by-step workflows">
               <div className="stat">{v}</div>
               <div className="stat-label">
                 {l} <span className="kpi-arrow">→</span>

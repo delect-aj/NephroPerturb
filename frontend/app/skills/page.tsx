@@ -39,7 +39,7 @@ export default function SkillsPage() {
             <span className="hero-kicker" style={{ marginBottom: 6 }}>
               NephroAgent Architecture · 6 Modular ReAct Skills
             </span>
-            <h1 className="skills-hero-title">Agent Skills &amp; Step-by-Step Logic</h1>
+            <h1 className="skills-hero-title">Agent Skills Guide</h1>
             <p className="skills-hero-sub">
               Every query is routed deterministically to one focused Skill with scoped tools, automatic nephrotoxicity reflection, and a verified 4-section synthesis report.
             </p>
@@ -90,7 +90,7 @@ export default function SkillsPage() {
       <div className="row" style={{ marginBottom: 9 }}>
         <h2 style={{ margin: 0, fontSize: 15 }}>
           {activeFilter === "all"
-            ? "Step-by-Step Logic for All 6 Skills"
+            ? "Step-by-Step Workflows"
             : `Focused View: ${visibleSkills[0]?.name}`}
         </h2>
         <span className="small muted">
