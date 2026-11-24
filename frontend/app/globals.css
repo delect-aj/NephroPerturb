@@ -801,21 +801,6 @@ a.kpi-link:hover .kpi-arrow {
   max-width: 780px;
   line-height: 1.5;
 }
-.skills-filter-strip {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 6px;
-  margin-top: 12px;
-  padding-top: 10px;
-  border-top: 1px solid #dbeafe;
-}
-.skill-dot {
-  width: 7px;
-  height: 7px;
-  border-radius: 50%;
-  display: inline-block;
-  flex-shrink: 0;
-}
 
 /* 6-Skill Catalog Cards */
 .skills-catalog-grid {
