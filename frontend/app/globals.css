@@ -817,52 +817,6 @@ a.kpi-link:hover .kpi-arrow {
   flex-shrink: 0;
 }
 
-/* Auto-routing 4-step horizontal decision flow */
-.route-flow-grid {
-  display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: 8px;
-  align-items: stretch;
-}
-@media (max-width: 1120px) {
-  .route-flow-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-  .route-flow-arrow { display: none !important; }
-}
-@media (max-width: 640px) {
-  .route-flow-grid { grid-template-columns: 1fr; }
-}
-.route-flow-item {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-}
-.route-step-card {
-  flex: 1;
-  height: 100%;
-  background: var(--panel-soft);
-  border: 1px solid var(--line);
-  border-radius: 10px;
-  padding: 10px 12px;
-  display: flex;
-  flex-direction: column;
-}
-.route-flow-arrow {
-  color: #94a3b8;
-  font-weight: 700;
-  font-size: 14px;
-  flex-shrink: 0;
-}
-.route-target-pill {
-  margin-top: auto;
-  display: inline-flex;
-  align-self: flex-start;
-  font-size: 11px;
-  font-weight: 600;
-  padding: 2px 8px;
-  border-radius: 999px;
-  border: 1px solid transparent;
-}
-
 /* 6-Skill Catalog Cards */
 .skills-catalog-grid {
   display: grid;

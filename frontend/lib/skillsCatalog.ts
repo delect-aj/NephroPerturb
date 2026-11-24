@@ -19,37 +19,6 @@ export interface SkillLogicDoc {
   examplePrompt: string;
 }
 
-export const AUTO_ROUTING_RULES = [
-  {
-    priority: "1",
-    title: "Manual Override",
-    target: "Selected Skill",
-    color: "#475569",
-    rule: "If you click a specific Skill pill in the console, Auto routing is skipped and that Skill runs directly.",
-  },
-  {
-    priority: "2",
-    title: "Compare or Safety Rescue",
-    target: "Compare Drugs / Safety & Rescue",
-    color: "#dc2626",
-    rule: "Compare/vs triggers Compare Drugs; safety/analog rescue terms trigger Safety & Rescue unless a cohort, signature, pathway, target, or SMILES screen is also requested.",
-  },
-  {
-    priority: "3",
-    title: "Pure Literature / Follow-up",
-    target: "Literature & Trials",
-    color: "#0284c7",
-    rule: "PubMed or clinical-trial queries without computational screen terms (or session follow-ups referencing #1, #2, or prior candidates) route to Literature & Trials.",
-  },
-  {
-    priority: "4",
-    title: "SOP-1..6 & Scope Guardrail",
-    target: "Disease / Target / Structure / Safety",
-    color: "#2563eb",
-    rule: "Matches Up/Down signatures, 10 kidney cohorts, pathways/TFs, knockdown targets, SMILES scaffolds, or compound profiles; non-kidney prompts stop cleanly.",
-  },
-];
-
 export const SHARED_SAFEGUARDS = [
   {
     title: "Scoped Determinism",

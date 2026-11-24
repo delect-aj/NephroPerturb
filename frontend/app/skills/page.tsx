@@ -4,7 +4,6 @@ import { useState } from "react";
 import Link from "next/link";
 import { useAgent } from "@/components/AgentContext";
 import {
-  AUTO_ROUTING_RULES,
   SHARED_SAFEGUARDS,
   SKILLS_CATALOG,
 } from "@/lib/skillsCatalog";
@@ -84,36 +83,6 @@ export default function SkillsPage() {
               </button>
             );
           })}
-        </div>
-      </section>
-
-      {/* Auto Skill Routing Funnel */}
-      <section className="card" style={{ marginBottom: 14 }}>
-        <div className="row" style={{ marginBottom: 10 }}>
-          <h2 style={{ margin: 0 }}>How Auto Skill Selects a Skill</h2>
-          <span className="badge grey">0-LLM Rule Router · &lt;1 ms</span>
-          <span className="small muted">Evaluated top-to-bottom before any LLM call</span>
-        </div>
-        <div className="route-flow-grid">
-          {AUTO_ROUTING_RULES.map((r, idx) => (
-            <div key={r.priority} className="route-flow-item">
-              <div className="route-step-card">
-                <div className="row" style={{ gap: 7, marginBottom: 5 }}>
-                  <span className="how-num">{r.priority}</span>
-                  <strong style={{ fontSize: 12.8 }}>{r.title}</strong>
-                </div>
-                <div className="small muted" style={{ lineHeight: 1.45, marginBottom: 7 }}>
-                  {r.rule}
-                </div>
-                <div className="route-target-pill" style={{ borderColor: `${r.color}33`, color: r.color, background: `${r.color}0d` }}>
-                  → {r.target}
-                </div>
-              </div>
-              {idx < AUTO_ROUTING_RULES.length - 1 && (
-                <div className="route-flow-arrow" aria-hidden="true">→</div>
-              )}
-            </div>
-          ))}
         </div>
       </section>
 
